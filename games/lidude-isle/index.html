@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Lidude Isle</title>
+<style>
+:root {
+  --sky: linear-gradient(180deg, #6cc5f2 0%, #a8e0f8 45%, #7ec850 60%, #5ba83a 100%);
+  --panel: rgba(255, 255, 255, 0.96);
+  --panel-dark: rgba(20, 24, 40, 0.92);
+  --ink: #1a1a2e;
+  --ink-soft: #4a4a6a;
+  --accent: #ff6b35;
+  --accent-2: #ffb627;
+  --coin: #fbbf24;
+  --gem: #c084fc;
+  --food: #f59e0b;
+  --xp: #06b6d4;
+  --common: #9ca3af;
+  --uncommon: #22c55e;
+  --rare: #3b82f6;
+  --epic: #a855f7;
+  --legendary: #f59e0b;
+  --mythic-grad: linear-gradient(45deg, #ff006e, #fb5607, #ffbe0b, #8338ec, #3a86ff);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--sky);
+  color: var(--ink);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+button:active { transform: scale(0.96); }
+
+#app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ===== TOP BAR ===== */
+#topbar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) 2fr auto;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--panel);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  align-items: center;
+  z-index: 10;
+}
+.res {
+  display: flex; align-items: center; gap: 4px;
+  font-weight: 700; font-size: 14px;
+  background: rgba(0,0,0,0.05);
+  padding: 6px 8px; border-radius: 10px;
+  min-width: 0;
+  position: relative;
+}
+.res .icon { font-size: 18px; }
+.res .val { font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+.res.flash { animation: flash 0.4s ease; }
+@keyframes flash { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); background: rgba(255,215,0,0.4); } }
+
+.xp-wrap {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.05);
+  padding: 6px 8px; border-radius: 10px;
+}
+.xp-wrap .lv {
+  background: var(--accent); color: white;
+  padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 800;
+}
+.xp-bar { flex: 1; height: 10px; background: rgba(0,0,0,0.1); border-radius: 5px; overflow: hidden; }
+.xp-fill { height: 100%; background: linear-gradient(90deg, var(--xp), #22d3ee); width: 0%; transition: width 0.3s ease; border-radius: 5px; }
+
+#crate-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white; padding: 8px 12px; border-radius: 10px;
+  font-weight: 800; font-size: 12px;
+  display: flex; flex-direction: column; align-items: center;
+  box-shadow: 0 3px 10px rgba(255,107,53,0.4);
+  position: relative;
+}
+#crate-btn.ready { animation: pulse 1.2s ease-in-out infinite; }
+#crate-btn .label { font-size: 10px; opacity: 0.9; }
+@keyframes pulse {
+  0%,100% { box-shadow: 0 3px 10px rgba(255,107,53,0.4), 0 0 0 0 rgba(255,107,53,0.6); }
+  50% { box-shadow: 0 3px 10px rgba(255,107,53,0.6), 0 0 0 12px rgba(255,107,53,0); }
+}
+
+/* ===== ISLAND ===== */
+#island {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 70%, #8fd85a 0%, #5ba83a 70%, #3d7a28 100%);
+}
+#island::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 15% 30%, rgba(255,255,255,0.4) 0 4px, transparent 4px),
+    radial-gradient(circle at 75% 20%, rgba(255,255,255,0.3) 0 3px, transparent 3px),
+    radial-gradient(circle at 50% 15%, rgba(255,255,255,0.35) 0 5px, transparent 5px),
+    radial-gradient(circle at 90% 50%, rgba(255,255,255,0.3) 0 3px, transparent 3px),
+    radial-gradient(circle at 20% 60%, rgba(139,90,43,0.3) 0 6px, transparent 6px),
+    radial-gradient(circle at 80% 75%, rgba(139,90,43,0.25) 0 5px, transparent 5px);
+  pointer-events: none;
+}
+
+.station {
+  position: absolute;
+  width: 110px; height: 110px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.station:hover { transform: translate(-50%, -50%) scale(1.05); }
+.station:active { transform: translate(-50%, -50%) scale(0.95); }
+.station .building {
+  font-size: 56px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+  animation: bob 3s ease-in-out infinite;
+}
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.station .label {
+  background: var(--panel-dark); color: white;
+  padding: 3px 8px; border-radius: 8px; font-size: 11px; font-weight: 700;
+  margin-top: 4px; white-space: nowrap;
+}
+.station .storage-bar {
+  position: absolute; bottom: -4px; left: 10%; right: 10%; height: 6px;
+  background: rgba(0,0,0,0.4); border-radius: 3px; overflow: hidden;
+}
+.station .storage-fill {
+  height: 100%; background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  width: 0%; transition: width 0.3s ease;
+}
+.station .storage-fill.full { background: linear-gradient(90deg, #10b981, #34d399); animation: glowpulse 1s ease-in-out infinite; }
+@keyframes glowpulse { 0%,100% { box-shadow: 0 0 6px rgba(16,185,129,0.8); } 50% { box-shadow: 0 0 16px rgba(16,185,129,1); } }
+.station .ready-badge {
+  position: absolute; top: -4px; right: 10px;
+  background: var(--accent); color: white;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+  animation: bounce 0.8s ease-in-out infinite;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+@keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.station .slot-count {
+  position: absolute; top: -2px; left: 6px;
+  background: rgba(0,0,0,0.7); color: white;
+  padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 700;
+}
+.station.locked { opacity: 0.4; filter: grayscale(1); }
+.station.locked::after {
+  content: '🔒'; position: absolute; font-size: 28px; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.visitor {
+  position: absolute;
+  font-size: 44px;
+  filter: drop-shadow(0 0 12px gold);
+  cursor: pointer;
+  z-index: 5;
+  animation: walkCycle 30s linear, visitorGlow 1s ease-in-out infinite;
+  transform: translateY(-50%);
+}
+@keyframes walkCycle {
+  0% { left: -60px; }
+  100% { left: calc(100% + 60px); }
+}
+@keyframes visitorGlow {
+  0%,100% { filter: drop-shadow(0 0 12px gold) drop-shadow(0 0 4px white); transform: translateY(-50%) scale(1); }
+  50% { filter: drop-shadow(0 0 20px gold) drop-shadow(0 0 8px white); transform: translateY(-50%) scale(1.1); }
+}
+
+/* ===== BOTTOM ACTIONS ===== */
+#actions {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--panel);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
+  z-index: 10;
+}
+.action-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px; border-radius: 10px;
+  background: rgba(0,0,0,0.05);
+  font-size: 11px; font-weight: 700;
+  transition: background 0.15s;
+  position: relative;
+}
+.action-btn:hover { background: rgba(0,0,0,0.1); }
+.action-btn .ico { font-size: 22px; }
+.action-btn .badge {
+  position: absolute; top: 4px; right: 10px;
+  background: var(--accent); color: white;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 9px; font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ===== STREAK BADGE ===== */
+#streak-badge {
+  position: absolute;
+  top: 70px; left: 12px;
+  background: var(--panel-dark); color: white;
+  padding: 6px 10px; border-radius: 12px;
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; gap: 6px;
+  z-index: 5;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+}
+
+/* ===== MODALS ===== */
+#modal-layer {
+  position: fixed; inset: 0;
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+#modal-layer.open { display: flex; }
+.modal {
+  background: var(--panel); border-radius: 20px;
+  width: 95%; max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modalIn { from { opacity: 0; transform: scale(0.85) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.modal-header {
+  padding: 16px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  position: sticky; top: 0;
+  background: var(--panel);
+  z-index: 2;
+}
+.modal-header h2 { font-size: 20px; font-weight: 800; }
+.modal-close { font-size: 22px; padding: 4px 10px; border-radius: 8px; color: var(--ink-soft); }
+.modal-close:hover { background: rgba(0,0,0,0.08); }
+.modal-body { padding: 16px 20px; }
+
+/* Gacha */
+.pull-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.pull-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white; padding: 14px; border-radius: 14px;
+  font-weight: 800; text-align: center;
+  box-shadow: 0 4px 12px rgba(255,107,53,0.35);
+}
+.pull-btn.premium { background: linear-gradient(135deg, #8338ec, #c084fc); box-shadow: 0 4px 12px rgba(131,56,236,0.4); }
+.pull-btn .big { font-size: 16px; }
+.pull-btn .small { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+.pull-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pity-bar {
+  margin-top: 14px; padding: 10px; border-radius: 10px;
+  background: rgba(0,0,0,0.05);
+  font-size: 12px; color: var(--ink-soft);
+}
+.pity-bar .row { display: flex; justify-content: space-between; margin: 4px 0; }
+.pity-progress { height: 4px; background: rgba(0,0,0,0.1); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+.pity-progress .fill { height: 100%; background: var(--legendary); width: 0%; transition: width 0.3s ease; }
+.pity-progress .fill.mythic { background: var(--mythic-grad); }
+
+/* Lidude grid */
+.lidude-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+}
+.lidude-card {
+  aspect-ratio: 1;
+  background: rgba(0,0,0,0.04);
+  border: 3px solid var(--common);
+  border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.15s;
+  overflow: hidden;
+}
+.lidude-card:hover { transform: scale(1.05); }
+.lidude-card .emoji { font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+.lidude-card .name { font-size: 10px; font-weight: 700; margin-top: 2px; }
+.lidude-card .count { position: absolute; top: 3px; right: 4px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 1px 5px; border-radius: 6px; font-weight: 800; }
+.lidude-card .stationed { position: absolute; bottom: 3px; left: 3px; font-size: 10px; background: var(--xp); color: white; padding: 1px 5px; border-radius: 6px; font-weight: 700; }
+.lidude-card.common { border-color: var(--common); }
+.lidude-card.uncommon { border-color: var(--uncommon); background: rgba(34,197,94,0.08); }
+.lidude-card.rare { border-color: var(--rare); background: rgba(59,130,246,0.1); }
+.lidude-card.epic { border-color: var(--epic); background: rgba(168,85,247,0.12); }
+.lidude-card.legendary { border-color: var(--legendary); background: rgba(245,158,11,0.15); box-shadow: 0 0 12px rgba(245,158,11,0.4); }
+.lidude-card.mythic {
+  border: 3px solid transparent;
+  background-image: linear-gradient(white, white), var(--mythic-grad);
+  background-origin: border-box; background-clip: padding-box, border-box;
+  animation: mythicShimmer 3s linear infinite;
+  box-shadow: 0 0 20px rgba(255,0,110,0.5);
+}
+@keyframes mythicShimmer {
+  0%,100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(30deg); }
+}
+.lidude-card.silhouette { filter: brightness(0) opacity(0.3); }
+.lidude-card.silhouette .name { display: none; }
+
+/* Quests */
+.quest {
+  padding: 12px; border-radius: 12px;
+  background: rgba(0,0,0,0.04);
+  margin-bottom: 10px;
+}
+.quest-header { display: flex; justify-content: space-between; align-items: center; }
+.quest-title { font-weight: 700; font-size: 14px; }
+.quest-reward { background: var(--coin); color: #5a3d00; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; }
+.quest-progress { margin-top: 8px; height: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; }
+.quest-progress-fill { height: 100%; background: linear-gradient(90deg, var(--uncommon), #10b981); transition: width 0.3s; }
+.quest-sub { font-size: 11px; color: var(--ink-soft); margin-top: 4px; display: flex; justify-content: space-between; }
+.quest-claim {
+  margin-top: 8px; width: 100%;
+  background: var(--uncommon); color: white;
+  padding: 8px; border-radius: 8px; font-weight: 800;
+  transition: transform 0.1s;
+}
+.quest-claim:disabled { background: rgba(0,0,0,0.15); color: var(--ink-soft); cursor: not-allowed; }
+.quest-claim:not(:disabled) { animation: claimPulse 1.2s ease-in-out infinite; }
+@keyframes claimPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); box-shadow: 0 0 12px rgba(34,197,94,0.6); } }
+
+/* Details modal */
+.detail-header { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+.detail-emoji { font-size: 60px; }
+.detail-info .name { font-size: 22px; font-weight: 800; }
+.detail-info .rarity { font-size: 12px; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; color: white; }
+.rarity-common { background: var(--common); }
+.rarity-uncommon { background: var(--uncommon); }
+.rarity-rare { background: var(--rare); }
+.rarity-epic { background: var(--epic); }
+.rarity-legendary { background: var(--legendary); }
+.rarity-mythic { background: var(--mythic-grad); }
+.detail-prod { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 10px; margin-top: 10px; }
+.detail-prod .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+.assign-btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+.assign-btn { background: rgba(0,0,0,0.08); padding: 10px; border-radius: 10px; font-weight: 700; font-size: 12px; }
+.assign-btn.active { background: var(--xp); color: white; }
+.assign-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Station details */
+.station-detail { text-align: center; }
+.station-detail .big-icon { font-size: 72px; }
+.station-detail .tier { font-size: 14px; color: var(--ink-soft); margin-bottom: 10px; }
+.station-detail .stat { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 10px; margin: 8px 0; font-size: 13px; text-align: left; }
+.station-detail .stat .row { display: flex; justify-content: space-between; padding: 3px 0; }
+.upgrade-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white; padding: 12px; border-radius: 12px; font-weight: 800; margin-top: 10px;
+}
+.upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.slot-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.slot-chip {
+  background: rgba(0,0,0,0.06); padding: 6px 10px; border-radius: 10px;
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px;
+}
+.slot-chip.empty { opacity: 0.5; font-style: italic; }
+.slot-chip .remove-btn { font-size: 14px; color: var(--accent); font-weight: 800; }
+
+/* Shop */
+.shop-item {
+  background: rgba(0,0,0,0.04); padding: 12px;
+  border-radius: 12px; margin-bottom: 10px;
+  display: flex; gap: 12px; align-items: center;
+}
+.shop-item .ico { font-size: 36px; }
+.shop-item .info { flex: 1; }
+.shop-item .title { font-weight: 700; font-size: 14px; }
+.shop-item .desc { font-size: 11px; color: var(--ink-soft); }
+.shop-buy { background: var(--accent); color: white; padding: 8px 12px; border-radius: 10px; font-weight: 800; font-size: 12px; }
+.shop-buy:disabled { opacity: 0.5; cursor: not-allowed; background: var(--common); }
+
+/* ===== GACHA PULL OVERLAY ===== */
+#pull-overlay {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at center, #1a1a2e 0%, #000 100%);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 200;
+  overflow: hidden;
+}
+#pull-overlay.open { display: flex; }
+.pull-stage {
+  position: relative;
+  width: 280px; height: 280px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pull-crate {
+  font-size: 140px;
+  animation: crateShake 1.5s ease-in-out;
+}
+.pull-crate.intense { animation: crateShake 0.4s linear infinite; }
+@keyframes crateShake {
+  0%,100% { transform: translate(0,0) rotate(0); }
+  20% { transform: translate(-4px,-2px) rotate(-3deg); }
+  40% { transform: translate(4px,2px) rotate(3deg); }
+  60% { transform: translate(-3px,3px) rotate(-2deg); }
+  80% { transform: translate(3px,-3px) rotate(2deg); }
+}
+.pull-flash {
+  position: absolute; inset: -200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, white 0%, transparent 60%);
+  opacity: 0;
+}
+.pull-flash.on { animation: flashPop 0.9s ease-out; }
+@keyframes flashPop {
+  0% { opacity: 0; transform: scale(0.2); }
+  30% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.pull-reveal {
+  position: absolute;
+  display: none; flex-direction: column; align-items: center;
+  animation: revealIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pull-reveal.show { display: flex; }
+@keyframes revealIn { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+.pull-reveal .big-emoji { font-size: 120px; filter: drop-shadow(0 0 30px currentColor); }
+.pull-reveal .big-name { color: white; font-size: 28px; font-weight: 800; margin-top: 12px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+.pull-reveal .big-rarity { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; padding: 4px 12px; border-radius: 10px; margin-top: 6px; color: white; }
+.pull-reveal .dupe-note { color: var(--coin); font-size: 12px; margin-top: 6px; }
+.pull-continue {
+  margin-top: 20px; padding: 10px 28px;
+  background: white; color: black;
+  border-radius: 20px; font-weight: 800;
+}
+.pull-rays {
+  position: absolute; inset: -100px;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.3) 10deg, transparent 20deg, transparent 40deg, rgba(255,255,255,0.3) 50deg, transparent 60deg);
+  animation: spin 8s linear infinite;
+  opacity: 0;
+}
+.pull-rays.on { opacity: 1; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.pull-reveal.legendary .big-emoji { color: var(--legendary); }
+.pull-reveal.epic .big-emoji { color: var(--epic); }
+.pull-reveal.rare .big-emoji { color: var(--rare); }
+.pull-reveal.mythic .big-emoji { animation: mythicEmoji 2s linear infinite; }
+@keyframes mythicEmoji {
+  0% { color: #ff006e; filter: drop-shadow(0 0 30px #ff006e); }
+  25% { color: #ffbe0b; filter: drop-shadow(0 0 30px #ffbe0b); }
+  50% { color: #3a86ff; filter: drop-shadow(0 0 30px #3a86ff); }
+  75% { color: #8338ec; filter: drop-shadow(0 0 30px #8338ec); }
+  100% { color: #ff006e; filter: drop-shadow(0 0 30px #ff006e); }
+}
+
+/* 10-pull results grid */
+.pull10-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 8px; max-width: 400px; margin-top: 20px;
+  padding: 16px;
+}
+.pull10-cell {
+  aspect-ratio: 1;
+  border: 3px solid var(--common);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  background: rgba(255,255,255,0.1);
+  animation: cellPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+@keyframes cellPop { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+
+/* ===== FLOATING PARTICLES ===== */
+#particles { position: fixed; inset: 0; pointer-events: none; z-index: 50; overflow: hidden; }
+.particle {
+  position: absolute;
+  font-weight: 800; font-size: 20px;
+  color: var(--coin);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 0 12px currentColor;
+  animation: float 1.2s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes float {
+  0% { opacity: 1; transform: translate(-50%, 0) scale(0.5); }
+  30% { opacity: 1; transform: translate(-50%, -30px) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -80px) scale(1); }
+}
+.particle.gems { color: var(--gem); }
+.particle.food { color: var(--food); }
+.particle.xp { color: var(--xp); font-size: 14px; }
+
+/* ===== WELCOME BACK ===== */
+#welcome-back {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--panel-dark); color: white;
+  padding: 20px 28px; border-radius: 16px;
+  text-align: center;
+  z-index: 80;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  display: none;
+  animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#welcome-back.open { display: block; }
+#welcome-back h3 { font-size: 18px; margin-bottom: 10px; }
+#welcome-back .earnings { font-size: 14px; line-height: 1.8; }
+#welcome-back button { margin-top: 14px; background: var(--accent); color: white; padding: 8px 20px; border-radius: 10px; font-weight: 800; }
+
+/* Level up celebration */
+#levelup-toast {
+  position: absolute; top: 80px; left: 50%;
+  transform: translateX(-50%) translateY(-150%);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white; padding: 12px 20px; border-radius: 14px;
+  font-weight: 800; font-size: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  z-index: 90;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#levelup-toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Misc */
+.hint { font-size: 11px; color: var(--ink-soft); padding: 4px 0; }
+.empty-state { text-align: center; padding: 30px 10px; color: var(--ink-soft); }
+.dex-progress {
+  padding: 12px; border-radius: 10px;
+  background: rgba(0,0,0,0.05);
+  margin-bottom: 12px; text-align: center; font-weight: 700;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="res" id="res-coins"><span class="icon">🪙</span> <span class="val">0</span></div>
+    <div class="res" id="res-gems"><span class="icon">💎</span> <span class="val">0</span></div>
+    <div class="res" id="res-food"><span class="icon">🌾</span> <span class="val">0</span></div>
+    <div class="xp-wrap">
+      <span class="lv">Lv <span id="lv-num">1</span></span>
+      <div class="xp-bar"><div id="xp-fill" class="xp-fill"></div></div>
+    </div>
+    <button id="crate-btn" onclick="claimFreeCrate()">
+      <div>🎁</div>
+      <div class="label" id="crate-label">--:--</div>
+    </button>
+  </header>
+  <main id="island">
+    <div id="streak-badge">🔥 <span id="streak-num">0</span>-day streak</div>
+  </main>
+  <footer id="actions">
+    <button class="action-btn" onclick="openModal('gacha')">
+      <span class="ico">🎰</span>
+      <span>Gacha</span>
+    </button>
+    <button class="action-btn" onclick="openModal('lidudes')">
+      <span class="ico">🐾</span>
+      <span>Lidudes</span>
+    </button>
+    <button class="action-btn" onclick="openModal('quests')">
+      <span class="ico">📜</span>
+      <span>Quests</span>
+      <span class="badge" id="quest-badge" style="display:none">!</span>
+    </button>
+    <button class="action-btn" onclick="openModal('shop')">
+      <span class="ico">🏪</span>
+      <span>Shop</span>
+    </button>
+    <button class="action-btn" onclick="openModal('dex')">
+      <span class="ico">📖</span>
+      <span>Dex</span>
+    </button>
+  </footer>
+  <div id="welcome-back"></div>
+  <div id="levelup-toast"></div>
+</div>
+<div id="modal-layer" onclick="if(event.target.id==='modal-layer')closeModal()"></div>
+<div id="pull-overlay" onclick="advancePull(event)"></div>
+<div id="particles"></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+const RARITY_RATES = {
+  common: 0.60, uncommon: 0.25, rare: 0.10, epic: 0.0395, legendary: 0.0100, mythic: 0.0005
+};
+const RARITY_COLOR_VAR = {
+  common: 'var(--common)', uncommon: 'var(--uncommon)', rare: 'var(--rare)',
+  epic: 'var(--epic)', legendary: 'var(--legendary)', mythic: 'var(--mythic-grad)'
+};
+const RARITY_MULT = { common: 1, uncommon: 2.5, rare: 7, epic: 20, legendary: 75, mythic: 300 };
+
+const SPECIES = [
+  // COMMONS
+  { id: 'bloomy',  name: 'Bloomy',  emoji: '🌱', rarity: 'common',  prod: {food:0.3},  aff: 'farm' },
+  { id: 'coiny',   name: 'Coiny',   emoji: '🪙', rarity: 'common',  prod: {coins:0.5}, aff: 'mine' },
+  { id: 'fluff',   name: 'Fluff',   emoji: '🐰', rarity: 'common',  prod: {food:0.4},  aff: 'farm' },
+  { id: 'chirpy',  name: 'Chirpy',  emoji: '🐥', rarity: 'common',  prod: {coins:0.4}, aff: 'dock' },
+  { id: 'nibble',  name: 'Nibble',  emoji: '🐿️', rarity: 'common',  prod: {food:0.35}, aff: 'farm' },
+  { id: 'dewy',    name: 'Dewy',    emoji: '💧', rarity: 'common',  prod: {coins:0.45},aff: 'dock' },
+  // UNCOMMONS
+  { id: 'spark',   name: 'Spark',   emoji: '⚡', rarity: 'uncommon',prod: {coins:1.2}, aff: 'mine' },
+  { id: 'breezy',  name: 'Breezy',  emoji: '🍃', rarity: 'uncommon',prod: {food:1.0},  aff: 'farm' },
+  { id: 'ember',   name: 'Ember',   emoji: '🔥', rarity: 'uncommon',prod: {coins:1.4}, aff: 'mine' },
+  { id: 'bubble',  name: 'Bubble',  emoji: '🫧', rarity: 'uncommon',prod: {gems:0.002},aff: 'lab' },
+  { id: 'sprout',  name: 'Sprout',  emoji: '🌿', rarity: 'uncommon',prod: {food:1.3},  aff: 'farm' },
+  // RARES
+  { id: 'glimmer', name: 'Glimmer', emoji: '✨', rarity: 'rare',    prod: {coins:4, gems:0.003}, aff: 'mine' },
+  { id: 'frosty',  name: 'Frosty',  emoji: '❄️', rarity: 'rare',    prod: {food:3.2, coins:2},  aff: 'farm' },
+  { id: 'thorn',   name: 'Thorn',   emoji: '🌹', rarity: 'rare',    prod: {coins:5},            aff: 'dock' },
+  { id: 'glow',    name: 'Glow',    emoji: '🌟', rarity: 'rare',    prod: {gems:0.01},          aff: 'lab' },
+  // EPICS
+  { id: 'zap',     name: 'Zap',     emoji: '🦊', rarity: 'epic',    prod: {coins:15},           aff: 'mine' },
+  { id: 'fang',    name: 'Fang',    emoji: '🐺', rarity: 'epic',    prod: {coins:12, food:4},   aff: 'dock' },
+  { id: 'runic',   name: 'Runic',   emoji: '🗿', rarity: 'epic',    prod: {gems:0.04},          aff: 'lab' },
+  // LEGENDARIES
+  { id: 'luxe',    name: 'Luxe',    emoji: '🦄', rarity: 'legendary', prod: {coins:60, gems:0.15}, aff: 'lab' },
+  { id: 'dragoon', name: 'Dragoon', emoji: '🐉', rarity: 'legendary', prod: {coins:90, food:20},   aff: 'mine' },
+  // MYTHIC
+  { id: 'cosmo',   name: 'Cosmo',   emoji: '🌌', rarity: 'mythic',    prod: {coins:400, gems:1.2, food:80}, aff: 'all' },
+];
+
+const STATION_TYPES = {
+  farm: { name: 'Farm',     emoji: '🌾', produces: 'food',  base: 0.5,   color: '#f59e0b' },
+  mine: { name: 'Mine',     emoji: '⛏️', produces: 'coins', base: 0.8,   color: '#6b7280' },
+  lab:  { name: 'Gem Lab',  emoji: '🔬', produces: 'gems',  base: 0.004, color: '#c084fc' },
+  dock: { name: 'Dock',     emoji: '⚓', produces: 'coins', base: 0.6,   color: '#3b82f6' },
+};
+
+const STATIONS_LAYOUT = [
+  { id: 'farm1', type: 'farm', x: 22, y: 32, unlocked: true  },
+  { id: 'mine1', type: 'mine', x: 72, y: 28, unlocked: true  },
+  { id: 'lab1',  type: 'lab',  x: 30, y: 72, unlocked: false, unlockLv: 3 },
+  { id: 'dock1', type: 'dock', x: 75, y: 75, unlocked: false, unlockLv: 5 },
+];
+
+const STATION_COST = [0, 500, 2500, 10000, 40000, 150000, 500000]; // cost to upgrade to tier N
+const STATION_SLOTS = [0, 2, 3, 4, 5, 6, 8]; // slots at tier N
+const STATION_STORAGE_CAP = [0, 300, 1200, 4800, 18000, 65000, 240000];
+const STATION_OUTPUT_MULT = [0, 1, 1.8, 3.2, 5.5, 9, 15];
+
+const CRATE_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
+const PULL_COST_COINS = 250;
+const PULL_COST_GEMS = 20;
+const PULL_TEN_COST_COINS = 2250;
+const PULL_TEN_COST_GEMS = 180;
+
+const PITY_EPIC = 10;       // guaranteed epic+ by pull 10
+const PITY_LEGENDARY = 50;  // guaranteed legendary by pull 50
+const PITY_MYTHIC = 200;    // guaranteed mythic by pull 200
+
+const ACTIVE_MULT_WINDOW_MS = 15000;
+const ACTIVE_MULT_VALUE = 2;
+
+const VISITOR_MIN_INTERVAL = 12 * 60 * 1000;
+const VISITOR_MAX_INTERVAL = 28 * 60 * 1000;
+const VISITOR_LIFETIME_MS = 60 * 1000;
+
+const DAILY_STREAK_REWARDS = [
+  { coins: 100 },
+  { coins: 250, gems: 5 },
+  { coins: 500, gems: 10 },
+  { coins: 1000, gems: 15 },
+  { coins: 2000, gems: 25 },
+  { coins: 3500, gems: 35 },
+  { coins: 6000, gems: 60, pull: 1 },
+];
+
+const QUEST_TEMPLATES = [
+  { id: 'tap',    title: 'Tap stations',     goal: [15, 30, 60],    reward: () => ({coins: 150 + Math.floor(Math.random()*200)}) },
+  { id: 'pull',   title: 'Summon Lidudes',   goal: [1, 3, 5],       reward: () => ({gems: 8}) },
+  { id: 'earn',   title: 'Earn coins',       goal: [500, 2000, 8000], reward: () => ({coins: 500}) },
+  { id: 'collect',title: 'Collect resources',goal: [5, 12, 25],     reward: () => ({coins: 300}) },
+  { id: 'level',  title: 'Gain XP',          goal: [50, 150, 400],  reward: () => ({coins: 400, gems: 5}) },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+const SAVE_KEY = 'lidudeIsle.v1';
+let state = defaultState();
+
+function defaultState() {
+  return {
+    coins: 200,
+    gems: 15,
+    food: 50,
+    level: 1,
+    xp: 0,
+    lidudes: {},            // speciesId -> count owned
+    stationed: {},          // stationId -> [speciesId, speciesId...]
+    stations: {
+      farm1: { tier: 1, storage: 0, lastTick: Date.now(), unlocked: true },
+      mine1: { tier: 1, storage: 0, lastTick: Date.now(), unlocked: true },
+      lab1:  { tier: 1, storage: 0, lastTick: Date.now(), unlocked: false },
+      dock1: { tier: 1, storage: 0, lastTick: Date.now(), unlocked: false },
+    },
+    lastSave: Date.now(),
+    lastFreeCrate: 0,
+    pullCount: 0,
+    pityEpic: 0,
+    pityLeg: 0,
+    pityMyth: 0,
+    compendium: {},
+    lastLoginDate: null,
+    streak: 0,
+    streakClaimed: false,
+    quests: null,           // { date, items: [{id,goal,progress,claimed,reward,tier}] }
+    questStats: { taps: 0, pulls: 0, earned: 0, collects: 0, xp: 0 },
+    visitor: null,
+    nextVisitorAt: Date.now() + rand(VISITOR_MIN_INTERVAL, VISITOR_MAX_INTERVAL),
+    lastActiveTap: 0,
+    totalPlayTimeMs: 0,
+    sessionStartedAt: Date.now(),
+  };
+}
+
+function rand(a, b) { return a + Math.random() * (b - a); }
+function choice(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+function todayKey() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+function xpForLevel(lv) { return Math.floor(80 * Math.pow(1.35, lv - 1)); }
+function fmt(n) {
+  if (n < 1000) return Math.floor(n).toString();
+  if (n < 1e6) return (n/1000).toFixed(n<10000?2:1).replace(/\.?0+$/, '') + 'K';
+  if (n < 1e9) return (n/1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+  if (n < 1e12) return (n/1e9).toFixed(2).replace(/\.?0+$/, '') + 'B';
+  return (n/1e12).toFixed(2) + 'T';
+}
+function fmtTime(ms) {
+  if (ms <= 0) return 'Ready!';
+  const h = Math.floor(ms/3600000);
+  const m = Math.floor((ms%3600000)/60000);
+  const s = Math.floor((ms%60000)/1000);
+  if (h) return `${h}h ${String(m).padStart(2,'0')}m`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function speciesById(id) { return SPECIES.find(s => s.id === id); }
+
+// ============================================================
+// SAVE / LOAD
+// ============================================================
+function save() {
+  state.lastSave = Date.now();
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { console.warn('save fail', e); }
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    // Merge defaults for forward compat
+    const fresh = defaultState();
+    state = Object.assign({}, fresh, parsed);
+    state.stations = Object.assign({}, fresh.stations, parsed.stations || {});
+    state.questStats = Object.assign({}, fresh.questStats, parsed.questStats || {});
+    return true;
+  } catch (e) { console.warn('load fail', e); return false; }
+}
+
+// ============================================================
+// ECONOMY
+// ============================================================
+function addCoins(n, silent = false) {
+  state.coins += n;
+  if (n > 0) state.questStats.earned += n;
+  if (!silent) animateRes('coins');
+  bumpQuest('earn', n);
+  renderTop();
+}
+function addGems(n) { state.gems += n; animateRes('gems'); renderTop(); }
+function addFood(n) { state.food += n; animateRes('food'); renderTop(); }
+function addXP(n) {
+  state.xp += n;
+  state.questStats.xp += n;
+  bumpQuest('level', n);
+  while (state.xp >= xpForLevel(state.level)) {
+    state.xp -= xpForLevel(state.level);
+    state.level++;
+    onLevelUp(state.level);
+  }
+  renderTop();
+}
+
+function onLevelUp(lv) {
+  // Rewards
+  const coinReward = 200 * lv;
+  const gemReward = 5 + Math.floor(lv / 3);
+  addCoins(coinReward, true);
+  state.gems += gemReward;
+  // Unlock stations
+  for (const s of STATIONS_LAYOUT) {
+    if (!state.stations[s.id].unlocked && s.unlockLv && lv >= s.unlockLv) {
+      state.stations[s.id].unlocked = true;
+      state.stations[s.id].lastTick = Date.now();
+      toastLevel(`Unlocked: ${STATION_TYPES[s.type].name}!`);
+    }
+  }
+  toastLevel(`Level ${lv}! +${fmt(coinReward)} 🪙 +${gemReward} 💎`);
+  renderIsland();
+}
+
+// ============================================================
+// STATIONS / PRODUCTION
+// ============================================================
+function stationRatePerSec(stationId) {
+  const layout = STATIONS_LAYOUT.find(s => s.id === stationId);
+  if (!layout) return {};
+  const state_s = state.stations[stationId];
+  if (!state_s.unlocked) return {};
+  const type = STATION_TYPES[layout.type];
+  const tierMult = STATION_OUTPUT_MULT[state_s.tier] || 1;
+  const baseRate = { [type.produces]: type.base * tierMult };
+  const assigned = state.stationed[stationId] || [];
+  for (const speciesId of assigned) {
+    const sp = speciesById(speciesId);
+    if (!sp) continue;
+    const affinity = (sp.aff === layout.type || sp.aff === 'all') ? 2 : 1;
+    for (const [res, amt] of Object.entries(sp.prod)) {
+      baseRate[res] = (baseRate[res] || 0) + amt * affinity * (1 + (state_s.tier-1)*0.25);
+    }
+  }
+  return baseRate;
+}
+
+function stationStorageCap(stationId) {
+  return STATION_STORAGE_CAP[state.stations[stationId].tier] || 100;
+}
+
+function stationTotalOutput(stationId) {
+  // Sum all resource rates as a single number for storage tracking
+  const rates = stationRatePerSec(stationId);
+  return Object.values(rates).reduce((a,b)=>a+b, 0);
+}
+
+function tickStations(dtMs, offline = false) {
+  const multiplier = offline ? 1 : activeMultiplier();
+  const now = Date.now();
+  for (const sid of Object.keys(state.stations)) {
+    const s = state.stations[sid];
+    if (!s.unlocked) continue;
+    const cap = stationStorageCap(sid);
+    if (s.storage >= cap) { s.lastTick = now; continue; }
+    const dtSec = dtMs / 1000;
+    const rate = stationTotalOutput(sid);
+    const gained = rate * dtSec * multiplier;
+    s.storage = Math.min(cap, s.storage + gained);
+    s.lastTick = now;
+  }
+}
+
+function collectStation(sid) {
+  const s = state.stations[sid];
+  if (!s.unlocked) return;
+  const stored = s.storage;
+  if (stored < 0.1) {
+    // nothing yet; but still count as tap
+    state.questStats.taps++;
+    bumpQuest('tap', 1);
+    state.lastActiveTap = Date.now();
+    return;
+  }
+  // Convert storage into actual resources (split proportionally by rates)
+  const rates = stationRatePerSec(sid);
+  const totalRate = Object.values(rates).reduce((a,b)=>a+b, 0) || 1;
+  const el = document.querySelector(`[data-station="${sid}"]`);
+  const rect = el ? el.getBoundingClientRect() : {left: window.innerWidth/2, top: window.innerHeight/2, width:0, height:0};
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+
+  for (const [res, rate] of Object.entries(rates)) {
+    const amt = stored * (rate / totalRate);
+    if (res === 'coins') { state.coins += amt; spawnParticle(cx, cy, `+${fmt(amt)} 🪙`, 'coins'); }
+    else if (res === 'gems') { state.gems += amt; spawnParticle(cx, cy, `+${amt.toFixed(2)} 💎`, 'gems'); }
+    else if (res === 'food') { state.food += amt; spawnParticle(cx, cy, `+${fmt(amt)} 🌾`, 'food'); }
+  }
+  s.storage = 0;
+  // XP for collecting
+  const xpGained = Math.ceil(stored / 20);
+  if (xpGained > 0) {
+    spawnParticle(cx, cy - 30, `+${xpGained} XP`, 'xp');
+    addXP(xpGained);
+  } else {
+    renderTop();
+  }
+  state.questStats.taps++;
+  state.questStats.collects++;
+  state.questStats.earned += (rates.coins || 0) * (stored / totalRate);
+  state.lastActiveTap = Date.now();
+  bumpQuest('tap', 1);
+  bumpQuest('collect', 1);
+  animateRes('coins'); animateRes('gems'); animateRes('food');
+  renderStationProgress(sid);
+  playSound('collect');
+}
+
+function upgradeStation(sid) {
+  const s = state.stations[sid];
+  const cost = STATION_COST[s.tier + 1];
+  if (!cost || cost === undefined) { toast('Max tier reached.'); return; }
+  if (state.coins < cost) { toast('Not enough coins.'); return; }
+  state.coins -= cost;
+  s.tier++;
+  addXP(50 * s.tier);
+  toast(`Upgraded to Tier ${s.tier}!`);
+  renderTop();
+  renderIsland();
+  // Keep modal open with refreshed content
+  if (currentModal === 'station') openStationDetail(sid);
+}
+
+function activeMultiplier() {
+  return (Date.now() - state.lastActiveTap < ACTIVE_MULT_WINDOW_MS) ? ACTIVE_MULT_VALUE : 1;
+}
+
+// ============================================================
+// GACHA
+// ============================================================
+function rollRarity(boostLegendary = false) {
+  state.pullCount++;
+  state.pityEpic++;
+  state.pityLeg++;
+  state.pityMyth++;
+
+  // Forced pity
+  if (state.pityMyth >= PITY_MYTHIC) { state.pityMyth = 0; state.pityLeg = 0; state.pityEpic = 0; return 'mythic'; }
+  if (state.pityLeg  >= PITY_LEGENDARY) { state.pityLeg = 0; state.pityEpic = 0; return 'legendary'; }
+  if (state.pityEpic >= PITY_EPIC) { state.pityEpic = 0; return 'epic'; }
+
+  let r = Math.random();
+  // Boosted pulls (e.g. from visitor or premium crate) raise the odds
+  if (boostLegendary) r *= 0.5;
+
+  let acc = 0;
+  for (const rarity of RARITY_ORDER) {
+    acc += RARITY_RATES[rarity];
+    if (r <= acc) {
+      if (rarity === 'mythic') { state.pityMyth = 0; state.pityLeg = 0; state.pityEpic = 0; }
+      else if (rarity === 'legendary') { state.pityLeg = 0; state.pityEpic = 0; }
+      else if (rarity === 'epic') { state.pityEpic = 0; }
+      return rarity;
+    }
+  }
+  return 'common';
+}
+
+function rollSpeciesAtRarity(rarity) {
+  const pool = SPECIES.filter(s => s.rarity === rarity);
+  return choice(pool);
+}
+
+function doPull(boost = false) {
+  const rarity = rollRarity(boost);
+  const sp = rollSpeciesAtRarity(rarity);
+  const isNew = !state.compendium[sp.id];
+  state.compendium[sp.id] = true;
+  state.lidudes[sp.id] = (state.lidudes[sp.id] || 0) + 1;
+  state.questStats.pulls++;
+  bumpQuest('pull', 1);
+  if (isNew) addXP(10 * RARITY_MULT[rarity] / 5);
+  return { species: sp, rarity, isNew };
+}
+
+function canAfford(cost) {
+  if (cost.coins && state.coins < cost.coins) return false;
+  if (cost.gems && state.gems < cost.gems) return false;
+  return true;
+}
+function pay(cost) {
+  if (cost.coins) state.coins -= cost.coins;
+  if (cost.gems) state.gems -= cost.gems;
+}
+
+// Pull animation
+let pullQueue = [];
+function pullBasic(n = 1) {
+  const cost = n === 10 ? { coins: PULL_TEN_COST_COINS } : { coins: PULL_COST_COINS };
+  if (!canAfford(cost)) { toast('Not enough coins.'); return; }
+  pay(cost);
+  renderTop();
+  pullQueue = [];
+  for (let i = 0; i < n; i++) pullQueue.push(doPull(false));
+  playPullSequence(n);
+}
+function pullPremium(n = 1) {
+  const cost = n === 10 ? { gems: PULL_TEN_COST_GEMS } : { gems: PULL_COST_GEMS };
+  if (!canAfford(cost)) { toast('Not enough gems.'); return; }
+  pay(cost);
+  renderTop();
+  pullQueue = [];
+  for (let i = 0; i < n; i++) pullQueue.push(doPull(true));
+  playPullSequence(n);
+}
+
+let pullInProgress = false;
+let pullIndex = 0;
+
+function playPullSequence(n) {
+  pullInProgress = true;
+  pullIndex = 0;
+  const overlay = document.getElementById('pull-overlay');
+  overlay.classList.add('open');
+  playSound('open');
+  if (n === 1) {
+    renderSinglePull(pullQueue[0]);
+  } else {
+    renderTenPull(pullQueue);
+  }
+}
+
+function renderSinglePull(result) {
+  const overlay = document.getElementById('pull-overlay');
+  const intense = ['epic','legendary','mythic'].includes(result.rarity);
+  overlay.innerHTML = `
+    <div class="pull-stage">
+      <div class="pull-rays ${intense?'on':''}"></div>
+      <div class="pull-flash"></div>
+      <div class="pull-crate ${intense?'intense':''}">📦</div>
+    </div>`;
+  // Shake period
+  setTimeout(() => {
+    const flash = overlay.querySelector('.pull-flash');
+    flash.classList.add('on');
+    playSound(result.rarity);
+    setTimeout(() => {
+      overlay.innerHTML = `
+        <div class="pull-stage">
+          <div class="pull-rays on"></div>
+          <div class="pull-reveal show ${result.rarity}">
+            <div class="big-emoji">${result.species.emoji}</div>
+            <div class="big-name">${result.species.name}</div>
+            <div class="big-rarity rarity-${result.rarity}" style="background:${RARITY_COLOR_VAR[result.rarity]}">${result.rarity}</div>
+            ${result.isNew ? '<div class="dupe-note">✨ New species!</div>' : '<div class="dupe-note">Duplicate (+10% affinity)</div>'}
+            <button class="pull-continue" onclick="closePull()">Tap to continue</button>
+          </div>
+        </div>`;
+    }, 500);
+  }, intense ? 1500 : 800);
+}
+
+function renderTenPull(results) {
+  const overlay = document.getElementById('pull-overlay');
+  const bestRarity = results.reduce((best, r) => RARITY_ORDER.indexOf(r.rarity) > RARITY_ORDER.indexOf(best) ? r.rarity : best, 'common');
+  const intense = ['epic','legendary','mythic'].includes(bestRarity);
+  overlay.innerHTML = `
+    <div class="pull-stage">
+      <div class="pull-rays ${intense?'on':''}"></div>
+      <div class="pull-flash"></div>
+      <div class="pull-crate intense">🎁</div>
+    </div>`;
+  setTimeout(() => {
+    const flash = overlay.querySelector('.pull-flash');
+    flash.classList.add('on');
+    playSound(bestRarity);
+    setTimeout(() => {
+      const cells = results.map((r, i) => `
+        <div class="pull10-cell" style="border-color:${RARITY_COLOR_VAR[r.rarity]}; animation-delay:${i*0.12}s">
+          ${r.species.emoji}
+        </div>
+      `).join('');
+      overlay.innerHTML = `
+        <div style="text-align:center; color:white;">
+          <div style="font-size:20px;font-weight:800; margin-bottom:6px;">10-Pull Results</div>
+          <div class="pull10-grid">${cells}</div>
+          <div style="margin-top:14px;font-size:13px;opacity:0.8">
+            New: ${results.filter(r=>r.isNew).length} · Rare+: ${results.filter(r=>['rare','epic','legendary','mythic'].includes(r.rarity)).length}
+          </div>
+          <button class="pull-continue" onclick="closePull()">Tap to continue</button>
+        </div>`;
+    }, 600);
+  }, 1500);
+}
+
+function advancePull(e) { /* overlay click passthrough handled by button */ }
+function closePull() {
+  pullInProgress = false;
+  document.getElementById('pull-overlay').classList.remove('open');
+  // Refresh open modal if gacha / lidudes / dex
+  if (currentModal === 'gacha') openModal('gacha');
+  if (currentModal === 'lidudes') openModal('lidudes');
+  if (currentModal === 'dex') openModal('dex');
+  save();
+}
+
+// ============================================================
+// FREE CRATE
+// ============================================================
+function claimFreeCrate() {
+  const ready = Date.now() - state.lastFreeCrate >= CRATE_COOLDOWN_MS;
+  if (!ready && state.lastFreeCrate !== 0) { toast('Not ready yet.'); return; }
+  state.lastFreeCrate = Date.now();
+  // Free crate: always one pull with slight boost
+  pullQueue = [doPull(false)];
+  playPullSequence(1);
+  renderTop();
+  save();
+}
+
+// ============================================================
+// VISITOR
+// ============================================================
+function maybeSpawnVisitor() {
+  const now = Date.now();
+  if (state.visitor && now - state.visitor.spawnedAt > VISITOR_LIFETIME_MS) {
+    state.visitor = null;
+    renderVisitor();
+  }
+  if (!state.visitor && now >= state.nextVisitorAt) {
+    // Spawn a rare+ visitor
+    const rarity = Math.random() < 0.5 ? 'rare' : (Math.random() < 0.7 ? 'epic' : 'legendary');
+    const sp = rollSpeciesAtRarity(rarity);
+    state.visitor = { speciesId: sp.id, rarity, spawnedAt: now, y: 20 + Math.random()*60 };
+    state.nextVisitorAt = now + VISITOR_LIFETIME_MS + rand(VISITOR_MIN_INTERVAL, VISITOR_MAX_INTERVAL);
+    renderVisitor();
+  }
+}
+function catchVisitor() {
+  if (!state.visitor) return;
+  const v = state.visitor;
+  const sp = speciesById(v.speciesId);
+  const isNew = !state.compendium[sp.id];
+  state.compendium[sp.id] = true;
+  state.lidudes[sp.id] = (state.lidudes[sp.id] || 0) + 1;
+  state.visitor = null;
+  pullQueue = [{ species: sp, rarity: v.rarity, isNew }];
+  playPullSequence(1);
+  renderVisitor();
+  save();
+}
+
+// ============================================================
+// DAILY STREAK
+// ============================================================
+function checkDailyStreak() {
+  const today = todayKey();
+  if (state.lastLoginDate === today) return;
+  const y = new Date(); y.setDate(y.getDate()-1);
+  const yKey = `${y.getFullYear()}-${y.getMonth()+1}-${y.getDate()}`;
+  if (state.lastLoginDate === yKey) {
+    state.streak++;
+  } else if (state.lastLoginDate === null) {
+    state.streak = 1;
+  } else {
+    state.streak = 1; // reset
+  }
+  state.lastLoginDate = today;
+  state.streakClaimed = false;
+  // Award streak bonus
+  const idx = Math.min(state.streak - 1, DAILY_STREAK_REWARDS.length - 1);
+  const reward = DAILY_STREAK_REWARDS[idx];
+  let msg = `🔥 Day ${state.streak}! +`;
+  if (reward.coins) { state.coins += reward.coins; msg += `${reward.coins} 🪙 `; }
+  if (reward.gems) { state.gems += reward.gems; msg += `${reward.gems} 💎 `; }
+  if (reward.pull) { pullQueue = []; for (let i=0;i<reward.pull;i++) pullQueue.push(doPull(true)); setTimeout(() => playPullSequence(reward.pull), 1500); msg += `+ Free pull! `; }
+  toastLevel(msg);
+  renderTop();
+}
+
+// ============================================================
+// QUESTS
+// ============================================================
+function refreshQuests(force = false) {
+  const today = todayKey();
+  if (!force && state.quests && state.quests.date === today) return;
+  // Pick 3 distinct templates
+  const pool = [...QUEST_TEMPLATES];
+  const picks = [];
+  for (let i=0; i<3 && pool.length; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(idx, 1)[0]);
+  }
+  state.quests = {
+    date: today,
+    items: picks.map((q, i) => {
+      const tier = Math.min(i, q.goal.length-1); // make them progressively harder-ish
+      return {
+        id: q.id, title: q.title, goal: q.goal[tier], tier,
+        progress: 0, claimed: false,
+        reward: q.reward(),
+        baseline: { ...state.questStats },
+      };
+    }),
+  };
+}
+function bumpQuest(kind, amt) {
+  if (!state.quests) return;
+  for (const q of state.quests.items) {
+    if (q.claimed) continue;
+    if (q.id === 'tap' && kind === 'tap') q.progress = Math.min(q.goal, q.progress + amt);
+    if (q.id === 'pull' && kind === 'pull') q.progress = Math.min(q.goal, q.progress + amt);
+    if (q.id === 'earn' && kind === 'earn') q.progress = Math.min(q.goal, q.progress + amt);
+    if (q.id === 'collect' && kind === 'collect') q.progress = Math.min(q.goal, q.progress + amt);
+    if (q.id === 'level' && kind === 'level') q.progress = Math.min(q.goal, q.progress + amt);
+  }
+  renderQuestBadge();
+}
+function claimQuest(i) {
+  const q = state.quests.items[i];
+  if (!q || q.claimed || q.progress < q.goal) return;
+  q.claimed = true;
+  if (q.reward.coins) { state.coins += q.reward.coins; spawnParticle(window.innerWidth/2, window.innerHeight/2, `+${q.reward.coins} 🪙`, 'coins'); }
+  if (q.reward.gems) { state.gems += q.reward.gems; spawnParticle(window.innerWidth/2, window.innerHeight/2+30, `+${q.reward.gems} 💎`, 'gems'); }
+  addXP(15 + q.tier*15);
+  renderTop();
+  if (currentModal === 'quests') openModal('quests');
+  renderQuestBadge();
+  // If all 3 claimed, bonus
+  if (state.quests.items.every(x => x.claimed)) {
+    state.coins += 500;
+    state.gems += 10;
+    toastLevel('All quests complete! +500 🪙 +10 💎');
+    renderTop();
+  }
+  save();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderTop() {
+  document.querySelector('#res-coins .val').textContent = fmt(state.coins);
+  document.querySelector('#res-gems .val').textContent = fmt(state.gems);
+  document.querySelector('#res-food .val').textContent = fmt(state.food);
+  document.getElementById('lv-num').textContent = state.level;
+  const need = xpForLevel(state.level);
+  document.getElementById('xp-fill').style.width = `${Math.min(100, (state.xp/need)*100)}%`;
+
+  const ready = Date.now() - state.lastFreeCrate >= CRATE_COOLDOWN_MS || state.lastFreeCrate === 0;
+  const btn = document.getElementById('crate-btn');
+  if (ready) { btn.classList.add('ready'); document.getElementById('crate-label').textContent = 'CLAIM!'; }
+  else { btn.classList.remove('ready'); document.getElementById('crate-label').textContent = fmtTime(CRATE_COOLDOWN_MS - (Date.now()-state.lastFreeCrate)); }
+
+  document.getElementById('streak-num').textContent = state.streak;
+
+  // Page title engagement ticker
+  const off = fmt(state.coins);
+  const unclaimed = Object.keys(state.stations).filter(sid => state.stations[sid].unlocked && state.stations[sid].storage >= stationStorageCap(sid) * 0.95).length;
+  document.title = `${off} 🪙${unclaimed ? ' ⚠️ '+unclaimed+' ready!' : ''} — Lidude Isle`;
+}
+
+function renderIsland() {
+  const island = document.getElementById('island');
+  const badge = document.getElementById('streak-badge');
+  // Remove old stations
+  island.querySelectorAll('.station').forEach(n => n.remove());
+  island.querySelectorAll('.visitor').forEach(n => n.remove());
+  for (const layout of STATIONS_LAYOUT) {
+    const s = state.stations[layout.id];
+    const type = STATION_TYPES[layout.type];
+    const locked = !s.unlocked;
+    const cap = stationStorageCap(layout.id);
+    const pct = Math.min(100, (s.storage / cap) * 100);
+    const full = pct >= 99.5;
+    const slots = STATION_SLOTS[s.tier] || 2;
+    const stationed = (state.stationed[layout.id] || []).length;
+    const el = document.createElement('div');
+    el.className = 'station' + (locked ? ' locked' : '');
+    el.style.left = layout.x + '%';
+    el.style.top = layout.y + '%';
+    el.setAttribute('data-station', layout.id);
+    el.innerHTML = `
+      <span class="slot-count">${stationed}/${slots}</span>
+      <div class="building">${type.emoji}</div>
+      <div class="label">${type.name} T${s.tier}</div>
+      ${locked ? '' : `<div class="storage-bar"><div class="storage-fill ${full?'full':''}" style="width:${pct}%"></div></div>`}
+      ${full ? '<div class="ready-badge">!</div>' : ''}
+    `;
+    el.addEventListener('click', (e) => {
+      if (locked) { toast(`Unlocks at level ${layout.unlockLv}`); return; }
+      if (e.shiftKey || e.metaKey || e.ctrlKey) { openStationDetail(layout.id); return; }
+      collectStation(layout.id);
+    });
+    el.addEventListener('contextmenu', (e) => { e.preventDefault(); openStationDetail(layout.id); });
+    // long-press for mobile
+    let pressTimer;
+    el.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { openStationDetail(layout.id); pressTimer = null; }, 500); });
+    el.addEventListener('touchend', () => { if (pressTimer) clearTimeout(pressTimer); });
+    el.addEventListener('touchmove', () => { if (pressTimer) clearTimeout(pressTimer); });
+    island.appendChild(el);
+  }
+  renderVisitor();
+}
+
+function renderStationProgress(sid) {
+  const el = document.querySelector(`[data-station="${sid}"]`);
+  if (!el) return;
+  const s = state.stations[sid];
+  const cap = stationStorageCap(sid);
+  const pct = Math.min(100, (s.storage / cap) * 100);
+  const full = pct >= 99.5;
+  const fill = el.querySelector('.storage-fill');
+  if (fill) { fill.style.width = pct + '%'; fill.classList.toggle('full', full); }
+  const existingBadge = el.querySelector('.ready-badge');
+  if (full && !existingBadge) { const b = document.createElement('div'); b.className = 'ready-badge'; b.textContent = '!'; el.appendChild(b); }
+  if (!full && existingBadge) existingBadge.remove();
+}
+
+function renderVisitor() {
+  const island = document.getElementById('island');
+  island.querySelectorAll('.visitor').forEach(n => n.remove());
+  if (!state.visitor) return;
+  const sp = speciesById(state.visitor.speciesId);
+  const el = document.createElement('div');
+  el.className = 'visitor';
+  el.textContent = sp.emoji;
+  el.style.top = state.visitor.y + '%';
+  el.title = `Rare visitor: ${sp.name}!`;
+  el.addEventListener('click', catchVisitor);
+  island.appendChild(el);
+}
+
+function animateRes(kind) {
+  const el = document.getElementById('res-' + kind);
+  if (!el) return;
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+
+function spawnParticle(x, y, text, cls = 'coins') {
+  const p = document.createElement('div');
+  p.className = 'particle ' + cls;
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+  p.textContent = text;
+  document.getElementById('particles').appendChild(p);
+  setTimeout(() => p.remove(), 1300);
+}
+
+function toast(msg) {
+  toastLevel(msg);
+}
+function toastLevel(msg) {
+  const el = document.getElementById('levelup-toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+function renderQuestBadge() {
+  const badge = document.getElementById('quest-badge');
+  if (!state.quests) { badge.style.display = 'none'; return; }
+  const ready = state.quests.items.filter(q => !q.claimed && q.progress >= q.goal).length;
+  if (ready > 0) { badge.style.display = 'flex'; badge.textContent = ready; }
+  else badge.style.display = 'none';
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+let currentModal = null;
+function openModal(kind, arg) {
+  currentModal = kind;
+  const layer = document.getElementById('modal-layer');
+  let html = '';
+  if (kind === 'gacha') html = renderGachaModal();
+  if (kind === 'lidudes') html = renderLidudesModal();
+  if (kind === 'quests') html = renderQuestsModal();
+  if (kind === 'shop') html = renderShopModal();
+  if (kind === 'dex') html = renderDexModal();
+  if (kind === 'lidudeDetail') html = renderLidudeDetail(arg);
+  if (kind === 'station') html = renderStationDetail(arg);
+  layer.innerHTML = html;
+  layer.classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-layer').classList.remove('open');
+  currentModal = null;
+}
+
+function renderGachaModal() {
+  return `
+  <div class="modal">
+    <div class="modal-header"><h2>🎰 Summoning Grounds</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <p class="hint">Pull Lidudes from the mist. Rarer = more production. Pity timers guarantee high rolls eventually.</p>
+
+      <div style="font-weight:700; margin-top:14px; margin-bottom:6px;">Basic Crate</div>
+      <div class="pull-btns">
+        <button class="pull-btn" onclick="pullBasic(1)">
+          <div class="big">Pull ×1</div>
+          <div class="small">${PULL_COST_COINS} 🪙</div>
+        </button>
+        <button class="pull-btn" onclick="pullBasic(10)">
+          <div class="big">Pull ×10</div>
+          <div class="small">${PULL_TEN_COST_COINS} 🪙 (10% off)</div>
+        </button>
+      </div>
+
+      <div style="font-weight:700; margin-top:14px; margin-bottom:6px;">Premium Crate (boosted rates)</div>
+      <div class="pull-btns">
+        <button class="pull-btn premium" onclick="pullPremium(1)">
+          <div class="big">Pull ×1</div>
+          <div class="small">${PULL_COST_GEMS} 💎</div>
+        </button>
+        <button class="pull-btn premium" onclick="pullPremium(10)">
+          <div class="big">Pull ×10</div>
+          <div class="small">${PULL_TEN_COST_GEMS} 💎 (10% off)</div>
+        </button>
+      </div>
+
+      <div class="pity-bar">
+        <div class="row"><span>Pity — Epic guaranteed in</span><strong>${PITY_EPIC - state.pityEpic} pulls</strong></div>
+        <div class="pity-progress"><div class="fill" style="width:${(state.pityEpic/PITY_EPIC)*100}%; background:var(--epic)"></div></div>
+        <div class="row" style="margin-top:8px"><span>Legendary guaranteed in</span><strong>${PITY_LEGENDARY - state.pityLeg} pulls</strong></div>
+        <div class="pity-progress"><div class="fill" style="width:${(state.pityLeg/PITY_LEGENDARY)*100}%"></div></div>
+        <div class="row" style="margin-top:8px"><span>Mythic guaranteed in</span><strong>${PITY_MYTHIC - state.pityMyth} pulls</strong></div>
+        <div class="pity-progress"><div class="fill mythic" style="width:${(state.pityMyth/PITY_MYTHIC)*100}%"></div></div>
+      </div>
+
+      <div class="hint" style="margin-top:14px">
+        Rates — Common ${(RARITY_RATES.common*100).toFixed(0)}% ·
+        Uncommon ${(RARITY_RATES.uncommon*100).toFixed(0)}% ·
+        Rare ${(RARITY_RATES.rare*100).toFixed(0)}% ·
+        Epic ${(RARITY_RATES.epic*100).toFixed(2)}% ·
+        Legendary ${(RARITY_RATES.legendary*100).toFixed(2)}% ·
+        Mythic ${(RARITY_RATES.mythic*100).toFixed(2)}%
+      </div>
+      <div class="hint">Total pulls: ${state.pullCount}</div>
+    </div>
+  </div>`;
+}
+
+function renderLidudesModal() {
+  const owned = Object.keys(state.lidudes).filter(id => state.lidudes[id] > 0);
+  const cards = owned.map(id => {
+    const sp = speciesById(id);
+    const assignedAt = Object.keys(state.stationed).find(sid => (state.stationed[sid]||[]).includes(id));
+    return `
+      <div class="lidude-card ${sp.rarity}" onclick="openModal('lidudeDetail', '${id}')">
+        <div class="count">×${state.lidudes[id]}</div>
+        <div class="emoji">${sp.emoji}</div>
+        <div class="name">${sp.name}</div>
+        ${assignedAt ? `<div class="stationed">${STATION_TYPES[STATIONS_LAYOUT.find(l=>l.id===assignedAt).type].emoji}</div>` : ''}
+      </div>`;
+  }).join('');
+  return `
+  <div class="modal">
+    <div class="modal-header"><h2>🐾 Your Lidudes</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      ${owned.length ? `<div class="lidude-grid">${cards}</div>` : '<div class="empty-state">No Lidudes yet. Try the gacha!</div>'}
+    </div>
+  </div>`;
+}
+
+function renderLidudeDetail(id) {
+  const sp = speciesById(id);
+  if (!sp) return '';
+  const owned = state.lidudes[id] || 0;
+  const currentAssignment = Object.keys(state.stationed).find(sid => (state.stationed[sid]||[]).includes(id));
+  const prodRows = Object.entries(sp.prod).map(([res, amt]) => {
+    const icon = res === 'coins' ? '🪙' : res === 'gems' ? '💎' : '🌾';
+    return `<div class="row"><span>${icon} per sec (base)</span><strong>+${amt}</strong></div>`;
+  }).join('');
+  const affStation = sp.aff === 'all' ? 'Any' : STATION_TYPES[sp.aff]?.name || '-';
+  const stationBtns = STATIONS_LAYOUT.filter(l => state.stations[l.id].unlocked).map(l => {
+    const slots = STATION_SLOTS[state.stations[l.id].tier] || 2;
+    const used = (state.stationed[l.id] || []).length;
+    const isHere = currentAssignment === l.id;
+    const canAssign = used < slots || isHere;
+    return `<button class="assign-btn ${isHere?'active':''}" ${canAssign?'':'disabled'} onclick="toggleAssign('${id}','${l.id}')">${STATION_TYPES[l.type].emoji} ${STATION_TYPES[l.type].name} ${used}/${slots}</button>`;
+  }).join('');
+  return `
+  <div class="modal">
+    <div class="modal-header">
+      <h2>${sp.name}</h2>
+      <button class="modal-close" onclick="openModal('lidudes')">← Back</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-header">
+        <div class="detail-emoji">${sp.emoji}</div>
+        <div class="detail-info">
+          <div class="name">${sp.name}</div>
+          <span class="rarity rarity-${sp.rarity}" style="background:${RARITY_COLOR_VAR[sp.rarity]}">${sp.rarity}</span>
+          <div class="hint" style="margin-top:4px">Owned: ×${owned}</div>
+          <div class="hint">Affinity: ${affStation} (2× output there)</div>
+        </div>
+      </div>
+      <div class="detail-prod">${prodRows}</div>
+      <div style="font-weight:700; margin-top:12px; margin-bottom:6px;">Assign to Station</div>
+      <div class="assign-btns">${stationBtns}</div>
+      ${currentAssignment ? `<button class="assign-btn" style="width:100%; margin-top:8px;" onclick="unassign('${id}')">Unassign</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleAssign(speciesId, stationId) {
+  // unassign from wherever it was first
+  for (const sid of Object.keys(state.stationed)) {
+    const arr = state.stationed[sid];
+    if (!arr) continue;
+    const idx = arr.indexOf(speciesId);
+    if (idx >= 0) { arr.splice(idx, 1); if (sid === stationId) { openModal('lidudeDetail', speciesId); return; } }
+  }
+  // assign
+  if (!state.stationed[stationId]) state.stationed[stationId] = [];
+  const slots = STATION_SLOTS[state.stations[stationId].tier] || 2;
+  if (state.stationed[stationId].length >= slots) { toast('Station is full.'); return; }
+  state.stationed[stationId].push(speciesId);
+  openModal('lidudeDetail', speciesId);
+  renderIsland();
+  save();
+}
+function unassign(speciesId) {
+  for (const sid of Object.keys(state.stationed)) {
+    const idx = (state.stationed[sid]||[]).indexOf(speciesId);
+    if (idx >= 0) state.stationed[sid].splice(idx, 1);
+  }
+  openModal('lidudeDetail', speciesId);
+  renderIsland();
+  save();
+}
+
+function renderQuestsModal() {
+  const rows = (state.quests?.items || []).map((q, i) => {
+    const rewardText = [
+      q.reward.coins ? `${q.reward.coins} 🪙` : null,
+      q.reward.gems ? `${q.reward.gems} 💎` : null,
+    ].filter(Boolean).join(' · ');
+    const ready = q.progress >= q.goal;
+    const label = q.id === 'tap' ? 'Tap stations'
+      : q.id === 'pull' ? 'Pull from gacha'
+      : q.id === 'earn' ? 'Earn coins'
+      : q.id === 'collect' ? 'Collect from stations'
+      : 'Gain XP';
+    return `
+      <div class="quest">
+        <div class="quest-header">
+          <div class="quest-title">${label}</div>
+          <div class="quest-reward">${rewardText}</div>
+        </div>
+        <div class="quest-progress"><div class="quest-progress-fill" style="width:${Math.min(100,(q.progress/q.goal)*100)}%"></div></div>
+        <div class="quest-sub"><span>${fmt(q.progress)} / ${fmt(q.goal)}</span><span>Tier ${q.tier+1}</span></div>
+        <button class="quest-claim" ${q.claimed ? 'disabled' : ready ? '' : 'disabled'} onclick="claimQuest(${i})">${q.claimed ? 'Claimed ✓' : ready ? 'Claim!' : 'In progress...'}</button>
+      </div>`;
+  }).join('');
+  return `
+  <div class="modal">
+    <div class="modal-header"><h2>📜 Daily Quests</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <p class="hint">Resets at midnight local time. Finishing all three grants a bonus.</p>
+      ${rows || '<div class="empty-state">Come back tomorrow!</div>'}
+    </div>
+  </div>`;
+}
+
+function renderShopModal() {
+  const items = [
+    { ico: '💎', title: '50 Gems', desc: 'Premium currency', cost: { coins: 5000 }, action: 'buyGems(50,5000)' },
+    { ico: '💎', title: '200 Gems (bulk)', desc: 'Better ratio', cost: { coins: 18000 }, action: 'buyGems(200,18000)' },
+    { ico: '🌾', title: 'Food Pack ×500', desc: 'Feed your Lidudes', cost: { coins: 1000 }, action: 'buyFood(500,1000)' },
+    { ico: '⚡', title: 'Instant Crate', desc: 'Skip the 4h timer', cost: { gems: 30 }, action: 'buyInstantCrate()' },
+  ];
+  const rows = items.map(it => {
+    const afford = canAfford(it.cost);
+    const costText = it.cost.coins ? `${it.cost.coins} 🪙` : `${it.cost.gems} 💎`;
+    return `
+      <div class="shop-item">
+        <div class="ico">${it.ico}</div>
+        <div class="info">
+          <div class="title">${it.title}</div>
+          <div class="desc">${it.desc}</div>
+        </div>
+        <button class="shop-buy" ${afford?'':'disabled'} onclick="${it.action}">${costText}</button>
+      </div>`;
+  }).join('');
+  return `
+  <div class="modal">
+    <div class="modal-header"><h2>🏪 Shop</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      ${rows}
+      <div class="hint" style="margin-top:10px">More items unlock as you level up.</div>
+    </div>
+  </div>`;
+}
+function buyGems(n, cost) { if (state.coins < cost) return; state.coins -= cost; state.gems += n; renderTop(); openModal('shop'); save(); }
+function buyFood(n, cost) { if (state.coins < cost) return; state.coins -= cost; state.food += n; renderTop(); openModal('shop'); save(); }
+function buyInstantCrate() { if (state.gems < 30) return; state.gems -= 30; state.lastFreeCrate = 0; renderTop(); closeModal(); claimFreeCrate(); }
+
+function renderDexModal() {
+  const seen = Object.keys(state.compendium).length;
+  const total = SPECIES.length;
+  const cards = SPECIES.map(sp => {
+    const revealed = !!state.compendium[sp.id];
+    return `
+      <div class="lidude-card ${sp.rarity} ${revealed?'':'silhouette'}">
+        <div class="emoji">${sp.emoji}</div>
+        <div class="name">${revealed ? sp.name : '???'}</div>
+      </div>`;
+  }).join('');
+  return `
+  <div class="modal">
+    <div class="modal-header"><h2>📖 Compendium</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="dex-progress">Discovered: ${seen} / ${total} (${Math.round(seen/total*100)}%)</div>
+      <div class="lidude-grid">${cards}</div>
+      <div class="hint" style="margin-top:10px;text-align:center">Complete your collection for a prestige bonus!</div>
+    </div>
+  </div>`;
+}
+
+function renderStationDetail(sid) {
+  const s = state.stations[sid];
+  const layout = STATIONS_LAYOUT.find(l => l.id === sid);
+  const type = STATION_TYPES[layout.type];
+  const slots = STATION_SLOTS[s.tier];
+  const stationedList = state.stationed[sid] || [];
+  const rates = stationRatePerSec(sid);
+  const cap = stationStorageCap(sid);
+  const nextCost = STATION_COST[s.tier + 1];
+  const nextSlots = STATION_SLOTS[s.tier + 1];
+  const nextCap = STATION_STORAGE_CAP[s.tier + 1];
+  const ratesText = Object.entries(rates).map(([r, v]) => `${r==='coins'?'🪙':r==='gems'?'💎':'🌾'} ${v.toFixed(2)}/s`).join(' · ') || 'No output';
+  const slotChips = [];
+  for (let i=0; i<slots; i++) {
+    const spId = stationedList[i];
+    if (spId) {
+      const sp = speciesById(spId);
+      slotChips.push(`<div class="slot-chip">${sp.emoji} ${sp.name} <span class="remove-btn" onclick="removeSlot('${sid}',${i})">✕</span></div>`);
+    } else {
+      slotChips.push(`<div class="slot-chip empty">— empty —</div>`);
+    }
+  }
+  return `
+  <div class="modal">
+    <div class="modal-header"><h2>${type.name}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body station-detail">
+      <div class="big-icon">${type.emoji}</div>
+      <div class="tier">Tier ${s.tier} · Produces ${type.produces}</div>
+      <div class="stat">
+        <div class="row"><span>Output</span><strong>${ratesText}</strong></div>
+        <div class="row"><span>Storage</span><strong>${fmt(s.storage)} / ${fmt(cap)}</strong></div>
+        <div class="row"><span>Lidude slots</span><strong>${stationedList.length} / ${slots}</strong></div>
+        <div class="row"><span>Active bonus</span><strong>${activeMultiplier()}× ${activeMultiplier()>1?'(tap for 2×)':''}</strong></div>
+      </div>
+      <div style="text-align:left;font-weight:700;margin-top:10px">Assigned Lidudes</div>
+      <div class="slot-row">${slotChips.join('')}</div>
+      ${nextCost ? `
+        <button class="upgrade-btn" ${state.coins>=nextCost?'':'disabled'} onclick="upgradeStation('${sid}')">
+          Upgrade to Tier ${s.tier+1} — ${fmt(nextCost)} 🪙<br>
+          <span style="font-weight:400;font-size:11px;opacity:0.85">Slots ${slots}→${nextSlots} · Cap ${fmt(cap)}→${fmt(nextCap)}</span>
+        </button>` : '<div class="hint" style="text-align:center;margin-top:10px">✨ Max tier!</div>'}
+      <button class="upgrade-btn" style="background:var(--xp)" onclick="closeModal(); openModal('lidudes')">Assign More Lidudes</button>
+    </div>
+  </div>`;
+}
+function openStationDetail(sid) { openModal('station', sid); }
+function removeSlot(sid, idx) {
+  const arr = state.stationed[sid] || [];
+  arr.splice(idx, 1);
+  openStationDetail(sid);
+  renderIsland();
+  save();
+}
+
+// ============================================================
+// SOUND (Web Audio, synthesized so no files needed)
+// ============================================================
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  return audioCtx;
+}
+function playSound(kind) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  function tone(freq, dur, type='sine', gain=0.15) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    g.gain.setValueAtTime(gain, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(now); osc.stop(now + dur);
+  }
+  if (kind === 'collect') tone(880, 0.08, 'triangle', 0.1);
+  else if (kind === 'open') tone(520, 0.2, 'square', 0.08);
+  else if (kind === 'common') tone(520, 0.15);
+  else if (kind === 'uncommon') { tone(660, 0.18); }
+  else if (kind === 'rare') { tone(660, 0.12); setTimeout(()=>tone(880,0.18),80); }
+  else if (kind === 'epic') { tone(660,0.1); setTimeout(()=>tone(880,0.1),80); setTimeout(()=>tone(1100,0.2),160); }
+  else if (kind === 'legendary') { tone(440,0.12); setTimeout(()=>tone(660,0.12),100); setTimeout(()=>tone(880,0.12),200); setTimeout(()=>tone(1320,0.3,'triangle',0.2),300); }
+  else if (kind === 'mythic') {
+    const notes = [392, 523, 659, 784, 987, 1319];
+    notes.forEach((f,i) => setTimeout(()=>tone(f,0.3,'triangle',0.18), i*120));
+  }
+}
+
+// ============================================================
+// GAME LOOP
+// ============================================================
+let loopLast = Date.now();
+function gameTick() {
+  const now = Date.now();
+  const dt = Math.min(5000, now - loopLast);
+  loopLast = now;
+  tickStations(dt);
+  maybeSpawnVisitor();
+
+  // Update station progress visuals
+  for (const sid of Object.keys(state.stations)) renderStationProgress(sid);
+  // Topbar updates for timer
+  renderTop();
+  renderQuestBadge();
+}
+
+function autosave() { save(); }
+
+// ============================================================
+// BOOT
+// ============================================================
+function boot() {
+  const had = load();
+  if (!had) {
+    // Seed: give starter Lidudes
+    state.lidudes.bloomy = 1;
+    state.lidudes.coiny = 1;
+    state.stationed.farm1 = ['bloomy'];
+    state.stationed.mine1 = ['coiny'];
+    state.compendium.bloomy = true;
+    state.compendium.coiny = true;
+  } else {
+    // Offline earnings
+    const awayMs = Date.now() - state.lastSave;
+    const cappedMs = Math.min(awayMs, 8 * 60 * 60 * 1000); // 8h cap
+    if (cappedMs > 10000) {
+      const before = { coins: state.coins, gems: state.gems, food: state.food };
+      tickStations(cappedMs, true);
+      // Auto-collect half of what filled up while away (other half waits in storage for tap)
+      let offCoins = 0, offGems = 0, offFood = 0;
+      for (const sid of Object.keys(state.stations)) {
+        const s = state.stations[sid];
+        if (!s.unlocked) continue;
+        const rates = stationRatePerSec(sid);
+        const totalRate = Object.values(rates).reduce((a,b)=>a+b,0) || 1;
+        const take = s.storage * 0.5;
+        s.storage -= take;
+        for (const [res, rate] of Object.entries(rates)) {
+          const amt = take * (rate/totalRate);
+          if (res === 'coins') { state.coins += amt; offCoins += amt; }
+          else if (res === 'gems') { state.gems += amt; offGems += amt; }
+          else if (res === 'food') { state.food += amt; offFood += amt; }
+        }
+      }
+      showWelcomeBack(awayMs, offCoins, offGems, offFood, awayMs > cappedMs);
+    }
+  }
+  checkDailyStreak();
+  refreshQuests();
+  renderTop();
+  renderIsland();
+  renderQuestBadge();
+  setInterval(gameTick, 250);
+  setInterval(autosave, 5000);
+  loopLast = Date.now();
+}
+
+function showWelcomeBack(awayMs, c, g, f, capped) {
+  const box = document.getElementById('welcome-back');
+  const hours = (awayMs/3600000).toFixed(1);
+  box.innerHTML = `
+    <h3>👋 Welcome back!</h3>
+    <div class="earnings">
+      You were away ${hours}h ${capped ? '(capped at 8h)' : ''}<br>
+      +${fmt(c)} 🪙  +${g.toFixed(2)} 💎  +${fmt(f)} 🌾<br>
+      <span style="opacity:0.7;font-size:12px">(Rest is waiting in your station storage — tap to collect.)</span>
+    </div>
+    <button onclick="document.getElementById('welcome-back').classList.remove('open')">Let's go →</button>
+  `;
+  box.classList.add('open');
+}
+
+window.addEventListener('load', boot);
+window.addEventListener('beforeunload', save);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+// Keyboard shortcuts for dev comfort
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { if (currentModal) closeModal(); if (!pullInProgress && document.getElementById('pull-overlay').classList.contains('open')) closePull(); }
+});
+
+// Expose for inline onclicks
+Object.assign(window, {
+  openModal, closeModal, pullBasic, pullPremium, closePull, claimFreeCrate,
+  toggleAssign, unassign, claimQuest, upgradeStation, openStationDetail, removeSlot,
+  buyGems, buyFood, buyInstantCrate
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lidude Isle — How to Play</title>
+<style>
+:root {
+  --sky-1: #6cc5f2;
+  --sky-2: #a8e0f8;
+  --grass-1: #8fd85a;
+  --grass-2: #5ba83a;
+  --grass-dark: #3d7a28;
+  --ink: #1a1a2e;
+  --ink-soft: #4a4a6a;
+  --paper: #fffdf7;
+  --panel: rgba(255,255,255,0.96);
+  --accent: #ff6b35;
+  --accent-2: #ffb627;
+  --coin: #fbbf24;
+  --gem: #c084fc;
+  --food: #f59e0b;
+  --xp: #06b6d4;
+  --common: #9ca3af;
+  --uncommon: #22c55e;
+  --rare: #3b82f6;
+  --epic: #a855f7;
+  --legendary: #f59e0b;
+  --mythic-grad: linear-gradient(45deg, #ff006e, #fb5607, #ffbe0b, #8338ec, #3a86ff);
+  --shadow-soft: 0 4px 14px rgba(26,26,46,0.08);
+  --shadow-mid: 0 10px 30px rgba(26,26,46,0.15);
+  --shadow-strong: 0 20px 60px rgba(26,26,46,0.25);
+  --radius-sm: 10px;
+  --radius: 18px;
+  --radius-lg: 28px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* =============== NAV =============== */
+nav {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(14px);
+  background: rgba(255,253,247,0.85);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.nav-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 14px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 900; font-size: 18px; letter-spacing: -0.5px;
+}
+.brand .mark {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 10px rgba(255,107,53,0.3);
+}
+.nav-links { display: flex; gap: 22px; align-items: center; }
+.nav-links a {
+  color: var(--ink); font-weight: 600; font-size: 14px;
+  padding: 6px 0; position: relative;
+}
+.nav-links a:hover { color: var(--accent); text-decoration: none; }
+.cta {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white; padding: 10px 18px; border-radius: 12px;
+  font-weight: 800; font-size: 14px;
+  box-shadow: 0 4px 14px rgba(255,107,53,0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cta:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,107,53,0.45); text-decoration: none; color: white; }
+@media (max-width: 720px) {
+  .nav-links { display: none; }
+  .nav-inner { padding: 12px 18px; }
+}
+
+/* =============== HERO =============== */
+.hero {
+  position: relative;
+  background: linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 55%, var(--grass-1) 78%, var(--grass-2) 100%);
+  padding: 80px 24px 120px;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(ellipse 500px 140px at 50% 100%, var(--grass-dark), transparent 70%),
+    radial-gradient(circle at 15% 30%, rgba(255,255,255,0.6) 0 5px, transparent 5px),
+    radial-gradient(circle at 75% 20%, rgba(255,255,255,0.5) 0 4px, transparent 4px),
+    radial-gradient(circle at 50% 15%, rgba(255,255,255,0.55) 0 6px, transparent 6px),
+    radial-gradient(circle at 90% 45%, rgba(255,255,255,0.5) 0 4px, transparent 4px);
+  pointer-events: none;
+}
+.hero-inner {
+  position: relative; z-index: 2;
+  max-width: 1100px; margin: 0 auto;
+  text-align: center;
+}
+.hero h1 {
+  font-size: clamp(44px, 8vw, 92px);
+  font-weight: 900; letter-spacing: -2px;
+  color: white;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  line-height: 1;
+}
+.hero h1 .accent {
+  background: linear-gradient(135deg, var(--accent-2), #fff3b0);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero .kicker {
+  display: inline-block;
+  background: var(--panel); color: var(--ink);
+  padding: 8px 18px; border-radius: 40px;
+  font-size: 13px; font-weight: 700;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-soft);
+}
+.hero p.sub {
+  color: white; font-size: clamp(16px, 2vw, 20px);
+  max-width: 640px; margin: 22px auto 36px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  font-weight: 500;
+}
+.hero-ctas {
+  display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+}
+.btn-primary, .btn-ghost {
+  padding: 14px 28px; border-radius: 14px;
+  font-weight: 800; font-size: 16px;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
+  box-shadow: 0 8px 24px rgba(255,107,53,0.45);
+}
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(255,107,53,0.55); text-decoration: none; color: white; }
+.btn-ghost {
+  background: rgba(255,255,255,0.2);
+  color: white; border: 2px solid rgba(255,255,255,0.4);
+  backdrop-filter: blur(8px);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.3); text-decoration: none; color: white; }
+
+/* Floating Lidudes in hero */
+.floaters { position: absolute; inset: 0; pointer-events: none; }
+.floater {
+  position: absolute;
+  font-size: 52px;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));
+  animation: floatIdle 6s ease-in-out infinite;
+}
+@keyframes floatIdle {
+  0%,100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-14px) rotate(3deg); }
+}
+.floater.f1 { top: 18%; left: 8%; animation-delay: 0s; font-size: 60px; }
+.floater.f2 { top: 55%; left: 4%; animation-delay: 1.5s; }
+.floater.f3 { top: 22%; right: 10%; animation-delay: 0.8s; font-size: 64px; }
+.floater.f4 { top: 62%; right: 6%; animation-delay: 2.2s; }
+.floater.f5 { top: 40%; left: 20%; animation-delay: 3s; font-size: 40px; opacity: 0.7; }
+.floater.f6 { top: 35%; right: 22%; animation-delay: 2.6s; font-size: 44px; opacity: 0.75; }
+@media (max-width: 720px) {
+  .floater.f5, .floater.f6 { display: none; }
+  .floater { font-size: 36px !important; }
+}
+
+/* Decorative wave separator */
+.wave {
+  position: relative;
+  margin-top: -40px;
+  z-index: 3;
+}
+.wave svg { display: block; width: 100%; height: 60px; }
+
+/* =============== SECTIONS =============== */
+section.content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 72px 28px;
+}
+.section-kicker {
+  color: var(--accent);
+  font-weight: 800; font-size: 13px;
+  text-transform: uppercase; letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+h2 {
+  font-size: clamp(30px, 5vw, 44px);
+  font-weight: 900; letter-spacing: -1.2px;
+  line-height: 1.1;
+  margin-bottom: 14px;
+}
+h2 .emoji { display: inline-block; transform: translateY(-4px); }
+.intro {
+  font-size: 17px; color: var(--ink-soft);
+  max-width: 620px;
+  margin-bottom: 40px;
+}
+
+/* =============== 60-SECOND CARDS =============== */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.quick-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 24px 22px;
+  box-shadow: var(--shadow-soft);
+  border-top: 5px solid var(--accent);
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.quick-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-mid); }
+.quick-card .num {
+  position: absolute; top: -16px; left: 22px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white; width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 16px;
+  box-shadow: 0 4px 12px rgba(255,107,53,0.35);
+}
+.quick-card h3 {
+  font-size: 16px; font-weight: 800;
+  margin: 10px 0 6px;
+}
+.quick-card p { font-size: 14px; color: var(--ink-soft); }
+.quick-card:nth-child(2) { border-color: var(--uncommon); }
+.quick-card:nth-child(2) .num { background: linear-gradient(135deg, var(--uncommon), #10b981); box-shadow: 0 4px 12px rgba(34,197,94,0.35); }
+.quick-card:nth-child(3) { border-color: var(--rare); }
+.quick-card:nth-child(3) .num { background: linear-gradient(135deg, var(--rare), #1d4ed8); box-shadow: 0 4px 12px rgba(59,130,246,0.35); }
+.quick-card:nth-child(4) { border-color: var(--epic); }
+.quick-card:nth-child(4) .num { background: linear-gradient(135deg, var(--epic), #7c3aed); box-shadow: 0 4px 12px rgba(168,85,247,0.35); }
+.quick-card:nth-child(5) { border-color: var(--legendary); }
+.quick-card:nth-child(5) .num { background: linear-gradient(135deg, var(--legendary), #d97706); box-shadow: 0 4px 12px rgba(245,158,11,0.35); }
+
+/* =============== FIRST 10 MINUTES TIMELINE =============== */
+.timeline-section {
+  background: linear-gradient(180deg, #fffdf7 0%, #fff3e0 100%);
+  padding: 72px 28px;
+}
+.timeline {
+  max-width: 820px; margin: 0 auto;
+  position: relative;
+}
+.timeline::before {
+  content: ''; position: absolute;
+  left: 24px; top: 16px; bottom: 16px; width: 3px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  border-radius: 2px;
+}
+.step {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 20px;
+  margin-bottom: 28px;
+  position: relative;
+}
+.step-marker {
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 20px;
+  color: var(--accent);
+  box-shadow: var(--shadow-soft);
+  z-index: 2;
+  position: relative;
+}
+.step-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-soft);
+}
+.step-card h3 {
+  font-size: 18px; font-weight: 800; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 8px;
+}
+.step-card h3 .e { font-size: 24px; }
+.step-card p { color: var(--ink-soft); font-size: 14.5px; }
+.step-card em { background: rgba(255,107,53,0.14); color: var(--accent); padding: 1px 6px; border-radius: 5px; font-style: normal; font-weight: 700; }
+
+/* =============== RARITY TIER LIST =============== */
+.tierlist-section {
+  padding: 72px 28px;
+  background: #fafafa;
+}
+.tierlist-section .inner { max-width: 1100px; margin: 0 auto; }
+.tierlist {
+  display: flex; flex-direction: column;
+  gap: 10px;
+  margin: 30px 0;
+}
+.tier-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 100px;
+  gap: 14px;
+  background: white;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  align-items: stretch;
+  min-height: 88px;
+}
+.tier-label {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: white;
+  font-weight: 900; font-size: 18px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.tier-label .mult { font-size: 11px; opacity: 0.9; letter-spacing: 1px; }
+.tier-row.common .tier-label { background: linear-gradient(135deg, var(--common), #6b7280); }
+.tier-row.uncommon .tier-label { background: linear-gradient(135deg, var(--uncommon), #15803d); }
+.tier-row.rare .tier-label { background: linear-gradient(135deg, var(--rare), #1e40af); }
+.tier-row.epic .tier-label { background: linear-gradient(135deg, var(--epic), #6b21a8); }
+.tier-row.legendary .tier-label {
+  background: linear-gradient(135deg, var(--legendary), #b45309);
+  animation: legendaryShimmer 3s ease-in-out infinite;
+}
+@keyframes legendaryShimmer {
+  0%,100% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); }
+  50% { box-shadow: inset 0 0 30px 0 rgba(255,255,255,0.3); }
+}
+.tier-row.mythic .tier-label {
+  background: var(--mythic-grad);
+  animation: mythicHue 4s linear infinite;
+}
+@keyframes mythicHue {
+  0%,100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(40deg); }
+}
+.tier-creatures {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 8px; padding: 12px 14px;
+}
+.tier-creature {
+  display: inline-flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-width: 68px; padding: 6px 8px 8px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  transition: transform 0.15s;
+}
+.tier-creature:hover { transform: scale(1.08); }
+.tier-creature .e { font-size: 28px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2)); }
+.tier-creature .n { font-size: 10px; font-weight: 700; color: var(--ink-soft); margin-top: 2px; }
+.tier-row.common .tier-creature { border-color: var(--common); }
+.tier-row.uncommon .tier-creature { border-color: var(--uncommon); background: rgba(34,197,94,0.08); }
+.tier-row.rare .tier-creature { border-color: var(--rare); background: rgba(59,130,246,0.08); }
+.tier-row.epic .tier-creature { border-color: var(--epic); background: rgba(168,85,247,0.1); }
+.tier-row.legendary .tier-creature {
+  border-color: var(--legendary);
+  background: rgba(245,158,11,0.12);
+  box-shadow: 0 0 10px rgba(245,158,11,0.3);
+}
+.tier-row.mythic .tier-creature {
+  border: 2px solid transparent;
+  background-image: linear-gradient(white, white), var(--mythic-grad);
+  background-origin: border-box; background-clip: padding-box, border-box;
+  box-shadow: 0 0 14px rgba(255,0,110,0.35);
+}
+.tier-rate {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 0 14px;
+  border-left: 1px dashed rgba(0,0,0,0.1);
+}
+.tier-rate .pct {
+  font-size: 22px; font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.tier-rate .lbl { font-size: 10px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 1px; }
+@media (max-width: 680px) {
+  .tier-row { grid-template-columns: 90px 1fr 72px; }
+  .tier-label { font-size: 14px; }
+  .tier-label .mult { font-size: 9px; }
+  .tier-creature { min-width: 54px; }
+  .tier-creature .e { font-size: 22px; }
+  .tier-rate .pct { font-size: 16px; }
+}
+
+.pity-callout {
+  margin-top: 28px;
+  background: white;
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  align-items: center;
+}
+.pity-callout .icon {
+  font-size: 52px;
+  background: linear-gradient(135deg, var(--legendary), var(--accent));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+.pity-callout h4 { font-size: 18px; margin-bottom: 6px; font-weight: 800; }
+.pity-callout p { color: var(--ink-soft); font-size: 14.5px; margin-bottom: 10px; }
+.pity-tiers {
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.pity-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 10px;
+  font-size: 13px; font-weight: 700;
+  color: white;
+}
+.pity-chip.e { background: var(--epic); }
+.pity-chip.l { background: var(--legendary); }
+.pity-chip.m { background: var(--mythic-grad); animation: mythicHue 4s linear infinite; }
+@media (max-width: 600px) {
+  .pity-callout { grid-template-columns: 1fr; text-align: center; }
+}
+
+/* =============== CORE LOOP DIAGRAM =============== */
+.loop-section {
+  padding: 72px 28px;
+  background: linear-gradient(180deg, #f0f9ff 0%, #fafafa 100%);
+}
+.loop-section .inner {
+  max-width: 1100px; margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+  align-items: center;
+}
+.loop-diagram {
+  position: relative;
+  aspect-ratio: 1;
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+}
+.loop-diagram .node {
+  position: absolute;
+  width: 92px; height: 92px;
+  border-radius: 22px;
+  background: white;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  box-shadow: var(--shadow-mid);
+  font-size: 12px; font-weight: 700;
+  text-align: center;
+  padding: 4px;
+}
+.loop-diagram .node .ico { font-size: 32px; margin-bottom: 2px; }
+.loop-diagram .n1 { top: 0; left: 50%; transform: translateX(-50%); border-top: 5px solid var(--uncommon); }
+.loop-diagram .n2 { top: 30%; right: 0; border-top: 5px solid var(--xp); }
+.loop-diagram .n3 { bottom: 0; right: 13%; border-top: 5px solid var(--coin); }
+.loop-diagram .n4 { bottom: 0; left: 13%; border-top: 5px solid var(--accent); }
+.loop-diagram .n5 { top: 30%; left: 0; border-top: 5px solid var(--epic); }
+.loop-diagram .arrow {
+  position: absolute;
+  inset: 0;
+}
+@media (max-width: 800px) {
+  .loop-section .inner { grid-template-columns: 1fr; }
+}
+
+/* =============== DAILY HOOKS TIMELINE =============== */
+.hooks-section { padding: 72px 28px; }
+.hooks-section .inner { max-width: 1100px; margin: 0 auto; }
+.hooks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 32px;
+}
+.hook-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+.hook-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-mid); }
+.hook-card::before {
+  content: ''; position: absolute;
+  top: -20px; right: -20px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  opacity: 0.08;
+  background: var(--accent);
+}
+.hook-card .cadence {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+.hook-card .icon {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+.hook-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+.hook-card p { font-size: 13.5px; color: var(--ink-soft); }
+
+.hook-card.h2c::before { background: var(--uncommon); }
+.hook-card.h2c .cadence { color: var(--uncommon); }
+.hook-card.h3c::before { background: var(--rare); }
+.hook-card.h3c .cadence { color: var(--rare); }
+.hook-card.h4c::before { background: var(--epic); }
+.hook-card.h4c .cadence { color: var(--epic); }
+.hook-card.h5c::before { background: var(--legendary); }
+.hook-card.h5c .cadence { color: var(--legendary); }
+.hook-card.h6c::before { background: #ef4444; }
+.hook-card.h6c .cadence { color: #ef4444; }
+
+/* =============== TIPS GRID =============== */
+.tips-section {
+  padding: 72px 28px;
+  background: linear-gradient(180deg, #fafafa 0%, #f0fdf4 100%);
+}
+.tips-section .inner { max-width: 1100px; margin: 0 auto; }
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 30px;
+}
+.tip {
+  background: white;
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-soft);
+  border-left: 4px solid var(--uncommon);
+}
+.tip h3 { font-size: 16px; font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.tip h3 .e { font-size: 22px; }
+.tip p { font-size: 14px; color: var(--ink-soft); }
+.tip:nth-child(even) { border-color: var(--rare); }
+.tip:nth-child(3n) { border-color: var(--epic); }
+.tip:nth-child(5n) { border-color: var(--legendary); }
+
+/* =============== REFRESH LOOP =============== */
+.refresh-section {
+  padding: 72px 28px;
+  background: var(--ink);
+  color: white;
+}
+.refresh-section h2 { color: white; }
+.refresh-section .section-kicker { color: var(--accent-2); }
+.refresh-section .intro { color: rgba(255,255,255,0.7); }
+.refresh-section .inner { max-width: 820px; margin: 0 auto; }
+.refresh-loop {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius);
+  padding: 30px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 15px;
+  line-height: 2;
+  margin-top: 22px;
+}
+.refresh-step { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: baseline; }
+.refresh-step .step-n {
+  background: var(--accent);
+  color: white;
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 13px;
+  font-family: system-ui;
+}
+.refresh-result {
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,182,39,0.1));
+  border-left: 3px solid var(--accent-2);
+  border-radius: var(--radius-sm);
+  font-family: system-ui;
+  font-size: 14.5px;
+}
+.refresh-result strong { color: var(--accent-2); }
+
+/* =============== ROADMAP =============== */
+.roadmap-section { padding: 72px 28px; }
+.roadmap-section .inner { max-width: 1100px; margin: 0 auto; }
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+  margin-top: 30px;
+}
+.road-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  transition: transform 0.2s;
+}
+.road-card:hover { transform: translateY(-4px); }
+.road-card .soon {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(255,107,53,0.14);
+  color: var(--accent);
+  font-size: 10px; font-weight: 800;
+  padding: 3px 8px; border-radius: 6px;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.road-card .ico { font-size: 38px; margin-bottom: 8px; }
+.road-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+.road-card p { font-size: 13.5px; color: var(--ink-soft); }
+
+/* =============== FAQ =============== */
+.faq-section {
+  padding: 72px 28px;
+  background: #fafafa;
+}
+.faq-section .inner { max-width: 820px; margin: 0 auto; }
+.faq {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.faq summary {
+  padding: 18px 22px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15.5px;
+  display: flex; justify-content: space-between; align-items: center;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: '+';
+  font-size: 24px; color: var(--accent); font-weight: 400;
+  transition: transform 0.2s;
+}
+.faq[open] summary::after { transform: rotate(45deg); }
+.faq[open] summary { border-bottom: 1px solid rgba(0,0,0,0.06); }
+.faq .body {
+  padding: 16px 22px 22px;
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+/* =============== FINAL CTA =============== */
+.final-cta {
+  padding: 90px 28px;
+  background: linear-gradient(180deg, var(--sky-1) 0%, var(--grass-2) 100%);
+  text-align: center;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+.final-cta::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.5) 0 4px, transparent 4px),
+    radial-gradient(circle at 80% 60%, rgba(255,255,255,0.45) 0 5px, transparent 5px),
+    radial-gradient(circle at 45% 75%, rgba(255,255,255,0.4) 0 3px, transparent 3px);
+  pointer-events: none;
+}
+.final-cta h2 {
+  font-size: clamp(32px, 5vw, 52px);
+  color: white;
+  text-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  margin-bottom: 14px;
+}
+.final-cta p { font-size: 17px; opacity: 0.95; margin-bottom: 26px; }
+.final-cta .btn-primary { font-size: 18px; padding: 16px 32px; }
+.final-cta .signature {
+  margin-top: 40px; font-size: 14px; opacity: 0.8;
+  font-style: italic;
+}
+
+/* =============== FOOTER =============== */
+footer {
+  padding: 30px 28px;
+  background: var(--ink);
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  font-size: 13px;
+}
+footer a { color: var(--accent-2); }
+
+/* =============== UTILITY =============== */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.in { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ====================== NAV ====================== -->
+<nav>
+  <div class="nav-inner">
+    <a href="#top" class="brand">
+      <span class="mark">🏝️</span>
+      <span>Lidude Isle</span>
+    </a>
+    <div class="nav-links">
+      <a href="#quick">Quick Start</a>
+      <a href="#first-ten">First 10 Min</a>
+      <a href="#rarity">Rarity</a>
+      <a href="#loop">Core Loop</a>
+      <a href="#tips">Tips</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a class="cta" href="./">▶ Play</a>
+  </div>
+</nav>
+
+<!-- ====================== HERO ====================== -->
+<section class="hero" id="top">
+  <div class="floaters">
+    <div class="floater f1">🌱</div>
+    <div class="floater f2">🦊</div>
+    <div class="floater f3">🦄</div>
+    <div class="floater f4">⚡</div>
+    <div class="floater f5">✨</div>
+    <div class="floater f6">🐉</div>
+  </div>
+  <div class="hero-inner">
+    <div class="kicker">🎮 The Official Field Guide</div>
+    <h1>How to play<br><span class="accent">Lidude Isle</span></h1>
+    <p class="sub">Your guide to the happiest, fuzziest, most addictive little island on Lido. Collect 21 species of Lidude, staff your stations, and build a tiny empire that hums along 24/7 — even when your tab is closed.</p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="./">▶ Launch Isle</a>
+      <a class="btn-ghost" href="#quick">How it works ↓</a>
+    </div>
+  </div>
+</section>
+<div class="wave">
+  <svg viewBox="0 0 1200 60" preserveAspectRatio="none">
+    <path d="M0,30 C200,60 400,0 600,30 C800,60 1000,0 1200,30 L1200,60 L0,60 Z" fill="#fffdf7"/>
+  </svg>
+</div>
+
+<!-- ====================== 60-SECOND VERSION ====================== -->
+<section class="content reveal" id="quick">
+  <div class="section-kicker">The basics</div>
+  <h2>The <span class="accent" style="color:var(--accent)">60-second</span> version <span class="emoji">⏱️</span></h2>
+  <p class="intro">Everything below is sauce. These five loops are the entire game.</p>
+
+  <div class="quick-grid">
+    <div class="quick-card">
+      <div class="num">1</div>
+      <h3>🪙 Tap to collect</h3>
+      <p>Stations fill up in real time. Come back often or they'll cap out and stop earning.</p>
+    </div>
+    <div class="quick-card">
+      <div class="num">2</div>
+      <h3>🎰 Pull Lidudes</h3>
+      <p>Open crates. Assign creatures to matching stations for a 2× affinity bonus.</p>
+    </div>
+    <div class="quick-card">
+      <div class="num">3</div>
+      <h3>⬆️ Upgrade stations</h3>
+      <p>More tiers unlock more slots, more storage, and exponentially more output.</p>
+    </div>
+    <div class="quick-card">
+      <div class="num">4</div>
+      <h3>🔥 Daily streak & quests</h3>
+      <p>Login every day. Don't break the streak. Finish three quests for a bonus chest.</p>
+    </div>
+    <div class="quick-card">
+      <div class="num">5</div>
+      <h3>🎁 Free crate, every 4h</h3>
+      <p>One free pull on the house. Claim it the moment the button pulses orange.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== FIRST 10 MINUTES ====================== -->
+<section class="timeline-section reveal" id="first-ten">
+  <div style="max-width:1100px; margin:0 auto; margin-bottom: 40px; padding: 0 8px;">
+    <div class="section-kicker">The onboarding</div>
+    <h2>Your first <span style="color:var(--accent)">10 minutes</span> <span class="emoji">🌅</span></h2>
+    <p class="intro">You'll land with 200 🪙, 15 💎, 50 🌾, a starter Bloomy, and a starter Coiny. Here's what to do, in order.</p>
+  </div>
+
+  <div class="timeline">
+    <div class="step">
+      <div class="step-marker">1</div>
+      <div class="step-card">
+        <h3><span class="e">👆</span> Tap your Farm and your Mine</h3>
+        <p>Watch the little <em>+N 🪙</em> particles puff upward. That's the core reward loop — the dopamine drip. Tap a few times. Feel that? That's hours of your future life.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-marker">2</div>
+      <div class="step-card">
+        <h3><span class="e">🎰</span> Do your first pull</h3>
+        <p>You have exactly enough for one basic pull (250 🪙). Do it. Even if it lands Common, you've just nudged the <em>pity counter</em> closer to a guaranteed Epic by pull 10, Legendary by 50, and Mythic by 200.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-marker">3</div>
+      <div class="step-card">
+        <h3><span class="e">🪑</span> Assign your new Lidude</h3>
+        <p>Open Lidudes, tap the new one, hit Assign. Check its <em>Affinity</em> — Lidudes produce 2× at their preferred station type. A Spark ⚡ in a Mine is worth two Sparks in a Farm.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-marker">4</div>
+      <div class="step-card">
+        <h3><span class="e">🎁</span> Claim the free crate</h3>
+        <p>Hit the pulsing orange button, top right. One free pull, and the 4-hour clock starts ticking. This is your main return hook — try to claim it the moment it rings.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-marker">5</div>
+      <div class="step-card">
+        <h3><span class="e">🔥</span> Start your streak</h3>
+        <p>The streak badge on the left side of the island is tracking you. Day 7 hands you a free <em>premium</em> pull. Miss a day and it all resets. The Farmville people invented this for a reason.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-marker">6</div>
+      <div class="step-card">
+        <h3><span class="e">📜</span> Finish a quest</h3>
+        <p>You have three daily tasks. The "Tap stations" one is usually two minutes of taps. Free 🪙, free XP, free gems. Claim all three for a bonus chest on top.</p>
+      </div>
+    </div>
+  </div>
+  <p style="text-align:center; color: var(--ink-soft); margin-top: 20px; font-size: 14px;">By minute 10: 3-5 Lidudes, a Tier-2 station, and a strong urge to see what Legendary looks like.</p>
+</section>
+
+<!-- ====================== RARITY TIER LIST ====================== -->
+<section class="tierlist-section reveal" id="rarity">
+  <div class="inner">
+    <div class="section-kicker">The ladder</div>
+    <h2>Rarity <span style="color:var(--accent)">tier list</span> <span class="emoji">🎲</span></h2>
+    <p class="intro">Six tiers. Rarer = exponentially more production. Mythic Lidudes produce up to <strong>300×</strong> a Common.</p>
+
+    <div class="tierlist">
+      <div class="tier-row common">
+        <div class="tier-label">Common<div class="mult">1× mult</div></div>
+        <div class="tier-creatures">
+          <div class="tier-creature"><div class="e">🌱</div><div class="n">Bloomy</div></div>
+          <div class="tier-creature"><div class="e">🪙</div><div class="n">Coiny</div></div>
+          <div class="tier-creature"><div class="e">🐰</div><div class="n">Fluff</div></div>
+          <div class="tier-creature"><div class="e">🐥</div><div class="n">Chirpy</div></div>
+          <div class="tier-creature"><div class="e">🐿️</div><div class="n">Nibble</div></div>
+          <div class="tier-creature"><div class="e">💧</div><div class="n">Dewy</div></div>
+        </div>
+        <div class="tier-rate"><div class="pct">60%</div><div class="lbl">pull rate</div></div>
+      </div>
+
+      <div class="tier-row uncommon">
+        <div class="tier-label">Uncommon<div class="mult">2.5× mult</div></div>
+        <div class="tier-creatures">
+          <div class="tier-creature"><div class="e">⚡</div><div class="n">Spark</div></div>
+          <div class="tier-creature"><div class="e">🍃</div><div class="n">Breezy</div></div>
+          <div class="tier-creature"><div class="e">🔥</div><div class="n">Ember</div></div>
+          <div class="tier-creature"><div class="e">🫧</div><div class="n">Bubble</div></div>
+          <div class="tier-creature"><div class="e">🌿</div><div class="n">Sprout</div></div>
+        </div>
+        <div class="tier-rate"><div class="pct">25%</div><div class="lbl">pull rate</div></div>
+      </div>
+
+      <div class="tier-row rare">
+        <div class="tier-label">Rare<div class="mult">7× mult</div></div>
+        <div class="tier-creatures">
+          <div class="tier-creature"><div class="e">✨</div><div class="n">Glimmer</div></div>
+          <div class="tier-creature"><div class="e">❄️</div><div class="n">Frosty</div></div>
+          <div class="tier-creature"><div class="e">🌹</div><div class="n">Thorn</div></div>
+          <div class="tier-creature"><div class="e">🌟</div><div class="n">Glow</div></div>
+        </div>
+        <div class="tier-rate"><div class="pct">10%</div><div class="lbl">pull rate</div></div>
+      </div>
+
+      <div class="tier-row epic">
+        <div class="tier-label">Epic<div class="mult">20× mult</div></div>
+        <div class="tier-creatures">
+          <div class="tier-creature"><div class="e">🦊</div><div class="n">Zap</div></div>
+          <div class="tier-creature"><div class="e">🐺</div><div class="n">Fang</div></div>
+          <div class="tier-creature"><div class="e">🗿</div><div class="n">Runic</div></div>
+        </div>
+        <div class="tier-rate"><div class="pct">3.95%</div><div class="lbl">pull rate</div></div>
+      </div>
+
+      <div class="tier-row legendary">
+        <div class="tier-label">Legendary<div class="mult">75× mult</div></div>
+        <div class="tier-creatures">
+          <div class="tier-creature"><div class="e">🦄</div><div class="n">Luxe</div></div>
+          <div class="tier-creature"><div class="e">🐉</div><div class="n">Dragoon</div></div>
+        </div>
+        <div class="tier-rate"><div class="pct">1.00%</div><div class="lbl">pull rate</div></div>
+      </div>
+
+      <div class="tier-row mythic">
+        <div class="tier-label">Mythic<div class="mult">300× mult</div></div>
+        <div class="tier-creatures">
+          <div class="tier-creature"><div class="e">🌌</div><div class="n">Cosmo</div></div>
+        </div>
+        <div class="tier-rate"><div class="pct">0.05%</div><div class="lbl">pull rate</div></div>
+      </div>
+    </div>
+
+    <div class="pity-callout">
+      <div class="icon">🎯</div>
+      <div>
+        <h4>Pity timers have your back</h4>
+        <p>If the RNG hates you, the pity system saves you. Every pull nudges you closer to a guaranteed upgrade. Counters reset when you hit their tier (or higher).</p>
+        <div class="pity-tiers">
+          <div class="pity-chip e">Epic by pull 10</div>
+          <div class="pity-chip l">Legendary by pull 50</div>
+          <div class="pity-chip m">Mythic by pull 200</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== CORE LOOP ====================== -->
+<section class="loop-section reveal" id="loop">
+  <div class="inner">
+    <div>
+      <div class="section-kicker">The engine</div>
+      <h2>The <span style="color:var(--accent)">core loop</span> <span class="emoji">🔁</span></h2>
+      <p style="color: var(--ink-soft); font-size: 16px; margin-bottom: 20px;">Your isle runs on <strong>stations</strong> — passive generators that accumulate resources in a storage buffer. When the buffer fills, production stops. That's the whole engine.</p>
+      <p style="color: var(--ink-soft); font-size: 15px;">Assigning Lidudes stacks output. A station's base rate gets multiplied by every Lidude you slot in, and affinity-matched Lidudes count <strong>double</strong>. A Tier-3 Mine with five mine-affinity Lidudes will dramatically outproduce a Tier-3 Mine with five random ones.</p>
+      <div style="margin-top: 20px; padding: 18px; background: white; border-radius: 14px; box-shadow: var(--shadow-soft);">
+        <div style="font-weight: 800; font-size: 14px; margin-bottom: 8px; color: var(--accent);">💡 ACTIVE PLAY BONUS</div>
+        <div style="font-size: 14px; color: var(--ink-soft);">Tap any station within the last 15 seconds and <strong>every station earns 2×</strong>. Focused sessions feel like progress; idle sessions feel like a cozy hum.</div>
+      </div>
+    </div>
+
+    <div class="loop-diagram">
+      <svg class="arrow" viewBox="0 0 400 400" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <polygon points="0 0, 10 5, 0 10" fill="#ff6b35"/>
+          </marker>
+        </defs>
+        <circle cx="200" cy="200" r="135" fill="none" stroke="#ff6b35" stroke-width="3" stroke-dasharray="6 6" opacity="0.4" />
+        <g stroke="#ff6b35" stroke-width="2.5" fill="none" marker-end="url(#arrowhead)" opacity="0.65">
+          <path d="M 265 80 Q 330 140 340 210" />
+          <path d="M 335 270 Q 295 335 225 345" />
+          <path d="M 170 345 Q 100 335 65 270" />
+          <path d="M 60 210 Q 70 140 135 80" />
+          <path d="M 175 55 Q 200 45 225 55" />
+        </g>
+      </svg>
+      <div class="node n1" style="z-index:2;">
+        <div class="ico">🐾</div>
+        <div>Lidudes</div>
+      </div>
+      <div class="node n2" style="z-index:2;">
+        <div class="ico">🏭</div>
+        <div>Station</div>
+      </div>
+      <div class="node n3" style="z-index:2;">
+        <div class="ico">📦</div>
+        <div>Storage</div>
+      </div>
+      <div class="node n4" style="z-index:2;">
+        <div class="ico">🪙</div>
+        <div>Resources</div>
+      </div>
+      <div class="node n5" style="z-index:2;">
+        <div class="ico">⬆️</div>
+        <div>Upgrades</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== DAILY HOOKS ====================== -->
+<section class="hooks-section reveal">
+  <div class="inner">
+    <div class="section-kicker">The rhythm</div>
+    <h2>Hooks that bring you <span style="color:var(--accent)">back</span> <span class="emoji">⏰</span></h2>
+    <p class="intro">The isle is tuned around the rhythm of a real day. Every interval fires its own little reward.</p>
+
+    <div class="hooks-grid">
+      <div class="hook-card">
+        <div class="cadence">Every second</div>
+        <div class="icon">🌱</div>
+        <h3>Passive ticks</h3>
+        <p>Resources accumulate into station storage. You're always earning something — even asleep.</p>
+      </div>
+      <div class="hook-card h2c">
+        <div class="cadence">Every 15 seconds</div>
+        <div class="icon">⚡</div>
+        <h3>Active 2× multiplier</h3>
+        <p>Tap anything and production doubles across the whole isle for 15 seconds. Stack it by tapping.</p>
+      </div>
+      <div class="hook-card h3c">
+        <div class="cadence">Every 4 hours</div>
+        <div class="icon">🎁</div>
+        <h3>Free crate</h3>
+        <p>One free pull at standard rates. Six free pulls a day if you stay on schedule.</p>
+      </div>
+      <div class="hook-card h4c">
+        <div class="cadence">Every 12-28 minutes</div>
+        <div class="icon">🌟</div>
+        <h3>Rare visitor</h3>
+        <p>A glowing Rare, Epic, or Legendary Lidude walks onto your isle for 60 seconds. Tap to catch, free.</p>
+      </div>
+      <div class="hook-card h5c">
+        <div class="cadence">Every session</div>
+        <div class="icon">📜</div>
+        <h3>Three daily quests</h3>
+        <p>Tap, pull, earn, collect, gain XP. Finish all three for a bonus chest on top of the rewards.</p>
+      </div>
+      <div class="hook-card h6c">
+        <div class="cadence">Every day</div>
+        <div class="icon">🔥</div>
+        <h3>Login streak</h3>
+        <p>Rewards scale day-by-day. Day 7 is a free premium pull. Miss one day — full reset.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== TIPS ====================== -->
+<section class="tips-section reveal" id="tips">
+  <div class="inner">
+    <div class="section-kicker">Pro moves</div>
+    <h2>Tips for new <span style="color:var(--accent)">isle-keepers</span> <span class="emoji">💡</span></h2>
+    <p class="intro">Little habits that compound into big numbers.</p>
+
+    <div class="tips-grid">
+      <div class="tip">
+        <h3><span class="e">🎯</span> Don't spread thin</h3>
+        <p>Two affinity-matched Lidudes in one station beat four random ones across two. Specialize early.</p>
+      </div>
+      <div class="tip">
+        <h3><span class="e">⬆️</span> Upgrade before you expand</h3>
+        <p>A Tier-3 station with full slots earns more than two Tier-1s. Upgrades multiply output, they don't add linearly.</p>
+      </div>
+      <div class="tip">
+        <h3><span class="e">🔟</span> Save gems for 10-pulls</h3>
+        <p>The 10-pull is 10% cheaper than ten singles. And the big-reveal animation at the end is, objectively, better.</p>
+      </div>
+      <div class="tip">
+        <h3><span class="e">♊</span> Duplicates aren't useless</h3>
+        <p>A duplicate means you can staff two stations with the same species. Don't (and can't) sell them — you'll want them.</p>
+      </div>
+      <div class="tip">
+        <h3><span class="e">👀</span> Tap the visitor instantly</h3>
+        <p>See a glowing Lidude walking past? Drop everything. Legendary visitors can skip 30+ pulls of grind.</p>
+      </div>
+      <div class="tip">
+        <h3><span class="e">📖</span> Compendium is the long game</h3>
+        <p>Filling all 21 slots unlocks the (coming soon) prestige bonus. Even Commons count — don't skip them.</p>
+      </div>
+      <div class="tip">
+        <h3><span class="e">🟢</span> Collect when caps</h3>
+        <p>When a station bar turns green and pulses, it's full and earning nothing. Every minute it sits full is wasted.</p>
+      </div>
+      <div class="tip">
+        <h3><span class="e">🎰</span> Always start pity</h3>
+        <p>Even a losing Common pull advances your guaranteed Epic countdown. Pity is always earning for you in the background.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== REFRESH LOOP ====================== -->
+<section class="refresh-section reveal">
+  <div class="inner">
+    <div class="section-kicker">Advanced</div>
+    <h2>The <span style="color:var(--accent-2)">"refresh loop"</span> <span class="emoji">🔄</span></h2>
+    <p class="intro">Once you're past Tier 2, this is the 90-second rhythm that maxes your coin-per-hour.</p>
+
+    <div class="refresh-loop">
+      <div class="refresh-step"><span class="step-n">1</span><span>Open the app.</span></div>
+      <div class="refresh-step"><span class="step-n">2</span><span>Tap every station <span style="opacity:0.6"># pockets storage + kicks 2× multiplier</span></span></div>
+      <div class="refresh-step"><span class="step-n">3</span><span>Claim free crate if ready</span></div>
+      <div class="refresh-step"><span class="step-n">4</span><span>Claim any completed quests</span></div>
+      <div class="refresh-step"><span class="step-n">5</span><span>If 250+ coins, do one basic pull <span style="opacity:0.6"># advances pity</span></span></div>
+      <div class="refresh-step"><span class="step-n">6</span><span>Close the app. Come back in 2-4 hours.</span></div>
+    </div>
+
+    <div class="refresh-result">
+      <strong>Total time:</strong> ~90 seconds. <strong>Result:</strong> roughly optimal play. Do this six times a day and you're in the top 5%.
+    </div>
+  </div>
+</section>
+
+<!-- ====================== ROADMAP ====================== -->
+<section class="roadmap-section reveal">
+  <div class="inner">
+    <div class="section-kicker">What's next</div>
+    <h2>Coming to the <span style="color:var(--accent)">isle</span> <span class="emoji">🗺️</span></h2>
+    <p class="intro">v1 is the foundation. Here's what we're building toward.</p>
+
+    <div class="roadmap-grid">
+      <div class="road-card">
+        <span class="soon">Soon</span>
+        <div class="ico">♾️</div>
+        <h3>Prestige / Rebirth</h3>
+        <p>Max your isle, reset it for a permanent multiplier. Infinite-progression unlocked.</p>
+      </div>
+      <div class="road-card">
+        <span class="soon">Soon</span>
+        <div class="ico">🌸</div>
+        <h3>Seasonal events</h3>
+        <p>Themed drops that never return — Spring Bloom, Harvest Moon, Anniversary Isle.</p>
+      </div>
+      <div class="road-card">
+        <span class="soon">v2</span>
+        <div class="ico">🫂</div>
+        <h3>Friend visits</h3>
+        <p>Drop by a friend's isle, leave a gift, snag a small bonus.</p>
+      </div>
+      <div class="road-card">
+        <span class="soon">v2</span>
+        <div class="ico">🏆</div>
+        <h3>Leaderboards</h3>
+        <p>Weekly top-earner rankings by Lido region.</p>
+      </div>
+      <div class="road-card">
+        <span class="soon">v2</span>
+        <div class="ico">🎫</div>
+        <h3>Battle pass</h3>
+        <p>Seasonal tracks with free and premium tiers of rewards.</p>
+      </div>
+      <div class="road-card">
+        <span class="soon">Later</span>
+        <div class="ico">🧬</div>
+        <h3>60+ species</h3>
+        <p>The isle is just getting populated. Way more Lidudes at full launch.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== FAQ ====================== -->
+<section class="faq-section reveal" id="faq">
+  <div class="inner">
+    <div class="section-kicker">Questions</div>
+    <h2>FAQ <span class="emoji">❓</span></h2>
+    <p class="intro" style="margin-bottom: 24px;">The stuff everyone asks.</p>
+
+    <details class="faq">
+      <summary>Does my isle earn while I'm offline?</summary>
+      <div class="body">Yes. Up to 8 hours of offline production accumulates in your stations. When you return, half is auto-collected (an instant welcome gift) and half waits in storage for you to tap.</div>
+    </details>
+
+    <details class="faq">
+      <summary>Where's my save?</summary>
+      <div class="body">Locally, in your browser. Clearing site data wipes your progress. Cloud saves tied to your Lido account are coming in v2.</div>
+    </details>
+
+    <details class="faq">
+      <summary>What's the Compendium for?</summary>
+      <div class="body">Right now: bragging rights and a discovery XP bump on new species. Post-prestige, it'll control which permanent bonuses you can equip.</div>
+    </details>
+
+    <details class="faq">
+      <summary>How rare is Cosmo 🌌 really?</summary>
+      <div class="body">0.05% per pull. Pity guarantees one by pull 200. Most players will see their first Mythic somewhere between pulls 80 and 200. The first one is unforgettable.</div>
+    </details>
+
+    <details class="faq">
+      <summary>Is there an end?</summary>
+      <div class="body">Technically no — the prestige system will let the game run forever. Practically, most players use the Compendium as their "done" marker.</div>
+    </details>
+
+    <details class="faq">
+      <summary>Can I lose progress?</summary>
+      <div class="body">Only by clearing browser data. Resources and Lidudes can never be removed from your account. Streaks can reset if you miss a day, but your creatures stay.</div>
+    </details>
+  </div>
+</section>
+
+<!-- ====================== FINAL CTA ====================== -->
+<section class="final-cta">
+  <h2>Your Bloomy misses you.</h2>
+  <p>Now stop reading and go tap something.</p>
+  <a class="btn-primary" href="./">▶ Launch the Isle</a>
+  <div class="signature">— The Lidude Isle team 🌱</div>
+</section>
+
+<footer>
+  Made with 🧡 for the Lido community · <a href="./">Play the game</a>
+</footer>
+
+<script>
+// Scroll reveals
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
