@@ -14,6 +14,21 @@
       "id": "lidude-isle",
       "name": "Lidude Isle",
       "path": "lidude-isle/index.html"
+    },
+    {
+      "id": "lidude-breakout",
+      "name": "Lidude Breakout",
+      "path": "lidude-breakout/index.html"
+    },
+    {
+      "id": "lidude-2048",
+      "name": "Lidude 2048",
+      "path": "lidude-2048/index.html"
+    },
+    {
+      "id": "lidude-tetris",
+      "name": "Lidude Tetris",
+      "path": "lidude-tetris/index.html"
     }
   ]
 }
