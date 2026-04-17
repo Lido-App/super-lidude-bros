@@ -9,6 +9,11 @@
       "id": "leflappy",
       "name": "LeFlappy",
       "path": "leflappy/index.html"
+    },
+    {
+      "id": "lidude-isle",
+      "name": "Lidude Isle",
+      "path": "lidude-isle/index.html"
     }
   ]
 }
