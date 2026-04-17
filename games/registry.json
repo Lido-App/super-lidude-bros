@@ -44,6 +44,11 @@
       "id": "lidude-pinball",
       "name": "Lido Pinball",
       "path": "lidude-pinball/index.html"
+    },
+    {
+      "id": "lidude-stack",
+      "name": "Lidude Stack",
+      "path": "lidude-stack/index.html"
     }
   ]
 }
