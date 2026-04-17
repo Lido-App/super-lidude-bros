@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeFlappy</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  overflow: hidden;
+  font-family: Inter, system-ui, sans-serif;
+}
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// Responsive sizing
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const W = 800, H = 480;
+
+// Constants
+const BIRD_X = 120, BIRD_SIZE = 24;
+const GRAVITY = 0.35, FLAP_FORCE = -6.5;
+const PIPE_WIDTH = 52, PIPE_GAP = 140, PIPE_SPEED = 2.5;
+const PIPE_SPAWN_INTERVAL = 100;
+
+// Colors
+const C = {
+  sky1: '#e1f4e7', sky2: '#f9fafb',
+  doc: '#ffffff', docBorder: '#d1d5db', docFold: '#e5e7eb', docLine: '#e5e7eb',
+  ground: '#43b268', groundDark: '#0f702f',
+  body: '#0f702f', bodyShadow: '#0a4d20', limb: '#c2eacf',
+  eyeWhite: '#f3f4f6', pupil: '#1f2a37', eyeShine: '#fff',
+  mouth: '#374151', motionLine: '#374151',
+  badge1: '#e02424', badge2: '#16bdca', badge3: '#faca15',
+  scoreText: '#374151', cloud: 'rgba(255,255,255,0.7)',
+};
+
+// State
+let birdY = H/2, birdVY = 0;
+let pipes = [];
+let score = 0, frame = 0;
+let alive = true, started = false;
+let extractionDone = false;
+
+// PostMessage
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'extraction-status') extractionDone = e.data.done;
+});
+setInterval(() => {
+  if (window.parent !== window) window.parent.postMessage({ type: 'score', value: score }, '*');
+}, 1000);
+if (window.parent !== window) window.parent.postMessage({ type: 'ready' }, '*');
+
+// Input
+function flap() {
+  if (!alive) { restart(); return; }
+  if (!started) started = true;
+  birdVY = FLAP_FORCE;
+}
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); flap(); }
+  if (e.code === 'Escape' && window.parent !== window) window.parent.postMessage({ type: 'exit' }, '*');
+});
+canvas.addEventListener('click', flap);
+
+function restart() {
+  birdY = H/2; birdVY = 0; pipes = []; score = 0; frame = 0;
+  alive = true; started = true;
+}
+
+// Drawing
+function drawLidude(y, vy) {
+  ctx.save();
+  const s = 0.6;
+  ctx.translate(BIRD_X, y);
+  ctx.rotate(Math.max(-0.3, Math.min(0.4, vy * 0.04)));
+  ctx.scale(s, s);
+  const bw=36, bh=28, bx=-bw/2, by=-bh/2;
+  ctx.fillStyle=C.bodyShadow; ctx.fillRect(bx-4,by+2,bw,bh);
+  ctx.fillStyle=C.body; ctx.fillRect(bx,by,bw,bh);
+  ctx.fillStyle=C.eyeWhite;
+  ctx.beginPath(); ctx.ellipse(bx+10,by+12,6,7,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(bx+26,by+12,6,7,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=C.pupil;
+  ctx.beginPath(); ctx.arc(bx+10,by+13,2.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(bx+26,by+13,2.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=C.eyeShine;
+  ctx.beginPath(); ctx.arc(bx+8,by+11,1.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(bx+24,by+11,1.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=C.mouth; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(bx+18,by+22,3,0.1,Math.PI-0.1); ctx.stroke();
+  ctx.strokeStyle=C.motionLine; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(bx+8,by-3); ctx.lineTo(bx+14,by-3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx+10,by-7); ctx.lineTo(bx+16,by-7); ctx.stroke();
+  ctx.fillStyle=C.badge1; ctx.fillRect(bx+bw-8,by+bh-8,6,6);
+  ctx.fillStyle=C.badge2; ctx.fillRect(bx+bw-8,by+bh-5,3,3);
+  ctx.fillStyle=C.badge3; ctx.fillRect(bx+bw-5,by+bh-5,3,3);
+  ctx.restore();
+}
+
+function drawDoc(x, y, w, h, flipped) {
+  const fold=10, r=3, gap=8, lh=2, m=8;
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.08)'; ctx.shadowBlur=6; ctx.shadowOffsetY=2;
+  ctx.fillStyle=C.doc;
+  ctx.beginPath();
+  if (!flipped) {
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+    ctx.lineTo(x+w,y+h-fold); ctx.lineTo(x+w-fold,y+h);
+    ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+    ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  } else {
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-fold,y); ctx.lineTo(x+w,y+fold);
+    ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+    ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+    ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+  ctx.strokeStyle=C.docBorder; ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle=C.docFold; ctx.beginPath();
+  if (!flipped) { ctx.moveTo(x+w-fold,y+h); ctx.lineTo(x+w,y+h-fold); ctx.lineTo(x+w-fold,y+h-fold); }
+  else { ctx.moveTo(x+w-fold,y); ctx.lineTo(x+w,y+fold); ctx.lineTo(x+w-fold,y+fold); }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  const ls=flipped?y+fold+m:y+m, le=flipped?y+h-m:y+h-fold-m, lw=w-m*2;
+  ctx.fillStyle=C.docLine;
+  for (let ly=ls; ly+lh<=le; ly+=gap) {
+    ctx.beginPath(); ctx.roundRect(x+m,ly,lw*(0.5+Math.abs(Math.sin(ly*0.3))*0.5),lh,1); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawBackground() {
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,C.sky1); g.addColorStop(1,C.sky2);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=C.cloud;
+  [100,320,550,750].forEach((cx,i) => {
+    const o=(frame*0.2+cx)%(W+100)-50, cy=50+(i%3)*40;
+    ctx.beginPath(); ctx.arc(o,cy,18,0,Math.PI*2);
+    ctx.arc(o+18,cy-8,22,0,Math.PI*2); ctx.arc(o+40,cy,18,0,Math.PI*2); ctx.fill();
+  });
+  ctx.fillStyle=C.ground; ctx.fillRect(0,H-40,W,40);
+  ctx.fillStyle=C.groundDark; ctx.fillRect(0,H-40,W,4);
+}
+
+// Game loop
+function gameLoop() {
+  const scale = Math.min(canvas.width/W, canvas.height/H);
+  const ox = (canvas.width - W*scale)/2, oy = (canvas.height - H*scale)/2;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save(); ctx.translate(ox,oy); ctx.scale(scale,scale);
+
+  if (started && alive) {
+    frame++;
+    birdVY += GRAVITY;
+    birdY += birdVY;
+    if (frame % PIPE_SPAWN_INTERVAL === 0) {
+      pipes.push({ x:W, gapY: 80+Math.random()*(H-PIPE_GAP-160), scored:false });
+    }
+    for (const p of pipes) {
+      p.x -= PIPE_SPEED;
+      if (!p.scored && p.x+PIPE_WIDTH < BIRD_X) { p.scored=true; score++; }
+    }
+    pipes = pipes.filter(p => p.x > -PIPE_WIDTH-10);
+    if (birdY+BIRD_SIZE > H-40 || birdY < 0) alive=false;
+    for (const p of pipes) {
+      if (BIRD_X+BIRD_SIZE > p.x && BIRD_X < p.x+PIPE_WIDTH) {
+        if (birdY < p.gapY || birdY+BIRD_SIZE > p.gapY+PIPE_GAP) alive=false;
+      }
+    }
+  }
+
+  drawBackground();
+  for (const p of pipes) {
+    drawDoc(p.x, 0, PIPE_WIDTH, p.gapY, false);
+    const by = p.gapY+PIPE_GAP;
+    drawDoc(p.x, by, PIPE_WIDTH, H-by-40, true);
+  }
+  drawLidude(birdY, birdVY);
+
+  if (started && alive) {
+    ctx.fillStyle=C.scoreText; ctx.font='bold 36px Inter, system-ui, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.globalAlpha=0.3; ctx.fillText(String(score), W/2, 50); ctx.globalAlpha=1;
+  }
+
+  if (!alive) {
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#374151'; ctx.font='bold 28px Inter, system-ui, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('Game Over', W/2, H/2-30);
+    ctx.font='16px Inter, system-ui, sans-serif'; ctx.fillStyle='#6b7280';
+    ctx.fillText('Score: '+score, W/2, H/2+10);
+    ctx.fillText('Click or press Space to restart', W/2, H/2+40);
+  }
+
+  if (!started) {
+    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#0f702f'; ctx.font='bold 28px Inter, system-ui, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('LeFlappy', W/2, H/2-30);
+    ctx.fillStyle='#6b7280'; ctx.font='16px Inter, system-ui, sans-serif';
+    ctx.fillText('Click or press Space to start', W/2, H/2+10);
+  }
+
+  ctx.restore();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>

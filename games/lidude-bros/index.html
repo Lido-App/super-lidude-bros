@@ -990,6 +990,32 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+// ---- PostMessage Protocol ----
+// Host → Game: { type: 'extraction-status', done: boolean }
+// Game → Host: { type: 'score', value: number }
+// Game → Host: { type: 'exit' }
+// Game → Host: { type: 'ready' }
+
+let extractionDone = false;
+
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'extraction-status') {
+    extractionDone = e.data.done;
+  }
+});
+
+// Report score periodically
+setInterval(() => {
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'score', value: score }, '*');
+  }
+}, 1000);
+
+// Notify host we're ready
+if (window.parent !== window) {
+  window.parent.postMessage({ type: 'ready' }, '*');
+}
+
 // Start
 buildLevel();
 gameLoop();

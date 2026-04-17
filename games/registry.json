@@ -1,0 +1,14 @@
+{
+  "games": [
+    {
+      "id": "lidude-bros",
+      "name": "Super Lidude Bros",
+      "path": "lidude-bros/index.html"
+    },
+    {
+      "id": "leflappy",
+      "name": "LeFlappy",
+      "path": "leflappy/index.html"
+    }
+  ]
+}
