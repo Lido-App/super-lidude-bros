@@ -246,9 +246,46 @@ function gameLoop() {
 }
 
 // PostMessage Protocol
-window.addEventListener('message', e => { if(e.data?.type==='extraction-status') {} });
+let paused = false;
+let savedGameState = null;
+
+window.addEventListener('message', e => {
+  if (e.data?.type === 'extraction-status') {}
+  if (e.data?.type === 'pause') {
+    paused = true;
+    savedGameState = gameState;
+  }
+  if (e.data?.type === 'resume') {
+    paused = false;
+    if (savedGameState) gameState = savedGameState;
+    savedGameState = null;
+  }
+});
 setInterval(()=>{if(window.parent!==window)window.parent.postMessage({type:'score',value:score},'*');},1000);
 if(window.parent!==window) window.parent.postMessage({type:'ready'},'*');
+
+// Wrap game loop with pause check
+const _origGameLoop = gameLoop;
+gameLoop = function() {
+  if (paused) {
+    // Still draw but don't update
+    const scale=Math.min(canvas.width/W,canvas.height/H);
+    const ox=(canvas.width-W*scale)/2, oy=(canvas.height-H*scale)/2;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
+    drawBackground();
+    const stx=Math.max(0,Math.floor(cameraX/TILE)-1), etx=Math.min(LEVEL_WIDTH,Math.ceil((cameraX+W)/TILE)+1);
+    for(let tx=stx;tx<etx;tx++)for(let ty=0;ty<15;ty++)if(tiles[tx]&&tiles[tx][ty])drawTile(tx,ty,tiles[tx][ty]);
+    coinItems.forEach(c=>drawCoin(c));
+    enemies.forEach(e=>drawEnemy(e));
+    if(gameState!=='gameover')drawLidude(player.x,player.y,player.facing,player.walkTimer);
+    drawParticles();
+    ctx.restore();
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+  _origGameLoop();
+};
 
 buildLevel();
 gameLoop();

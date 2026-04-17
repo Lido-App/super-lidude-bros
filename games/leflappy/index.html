@@ -58,10 +58,13 @@ let pipes = [];
 let score = 0, frame = 0;
 let alive = true, started = false;
 let extractionDone = false;
+let paused = false;
 
 // PostMessage
 window.addEventListener('message', (e) => {
   if (e.data?.type === 'extraction-status') extractionDone = e.data.done;
+  if (e.data?.type === 'pause') paused = true;
+  if (e.data?.type === 'resume') paused = false;
 });
 setInterval(() => {
   if (window.parent !== window) window.parent.postMessage({ type: 'score', value: score }, '*');
@@ -168,7 +171,7 @@ function gameLoop() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save(); ctx.translate(ox,oy); ctx.scale(scale,scale);
 
-  if (started && alive) {
+  if (started && alive && !paused) {
     frame++;
     birdVY += GRAVITY;
     birdY += birdVY;
