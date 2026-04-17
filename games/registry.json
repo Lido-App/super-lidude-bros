@@ -24,6 +24,11 @@
       "id": "lidude-2048",
       "name": "Lidude 2048",
       "path": "lidude-2048/index.html"
+    },
+    {
+      "id": "lidude-tetris",
+      "name": "Lidude Tetris",
+      "path": "lidude-tetris/index.html"
     }
   ]
 }
