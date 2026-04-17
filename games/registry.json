@@ -14,6 +14,11 @@
       "id": "lidude-isle",
       "name": "Lidude Isle",
       "path": "lidude-isle/index.html"
+    },
+    {
+      "id": "lidude-breakout",
+      "name": "Lidude Breakout",
+      "path": "lidude-breakout/index.html"
     }
   ]
 }
