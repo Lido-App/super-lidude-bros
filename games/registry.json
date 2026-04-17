@@ -49,6 +49,11 @@
       "id": "lidude-stack",
       "name": "Lidude Stack",
       "path": "lidude-stack/index.html"
+    },
+    {
+      "id": "lidude-dash",
+      "name": "Lidude Dash",
+      "path": "lidude-dash/index.html"
     }
   ]
 }
