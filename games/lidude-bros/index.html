@@ -171,17 +171,13 @@ function drawEnemy(e) {
 }
 
 function drawBackground() {
-  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,C.sky1);g.addColorStop(0.7,C.sky2);g.addColorStop(1,C.skyHorizon);
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,C.sky1);g.addColorStop(1,C.sky2);
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   ctx.fillStyle=C.cloud;
   [100,400,750,1100,1600,2100,2700,3400,4000,4800,5500,6200].forEach((cx,i)=>{
     const px=cx-cameraX*0.3,wr=((px%(W+200))+W+200)%(W+200)-100,cy=40+(i%3)*50;
-    ctx.beginPath();ctx.arc(wr,cy,20,0,Math.PI*2);ctx.arc(wr+20,cy-10,25,0,Math.PI*2);ctx.arc(wr+45,cy,20,0,Math.PI*2);ctx.arc(wr+20,cy+5,22,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(wr,cy,18,0,Math.PI*2);ctx.arc(wr+18,cy-8,22,0,Math.PI*2);ctx.arc(wr+40,cy,18,0,Math.PI*2);ctx.fill();
   });
-  ctx.fillStyle=C.hill;
-  [0,500,1100,1800,2500,3200,4000,5000,6000].forEach((hx,i)=>{const px=hx-cameraX*0.5,sz=i%2===0?120:80;ctx.beginPath();ctx.arc(px,GROUND_Y+TILE,sz,Math.PI,0);ctx.fill();});
-  ctx.fillStyle=C.bush;
-  [200,600,1050,1500,2000,2800,3500,4500,5200].forEach((bx,i)=>{const px=bx-cameraX*0.6,bs=20+(i%3)*10;ctx.beginPath();ctx.arc(px,GROUND_Y,bs,Math.PI,0);ctx.fill();ctx.beginPath();ctx.arc(px-bs*0.7,GROUND_Y,bs*0.7,Math.PI,0);ctx.fill();ctx.beginPath();ctx.arc(px+bs*0.7,GROUND_Y,bs*0.7,Math.PI,0);ctx.fill();});
 }
 
 function drawParticles() {
