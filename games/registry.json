@@ -29,6 +29,11 @@
       "id": "lidude-tetris",
       "name": "Lidude Tetris",
       "path": "lidude-tetris/index.html"
+    },
+    {
+      "id": "lidude-cash",
+      "name": "Lidude Cash",
+      "path": "lidude-cash/index.html"
     }
   ]
 }
