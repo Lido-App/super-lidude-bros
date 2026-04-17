@@ -34,6 +34,11 @@
       "id": "lidude-cash",
       "name": "Lidude Cash",
       "path": "lidude-cash/index.html"
+    },
+    {
+      "id": "lidude-leap",
+      "name": "Lidude Leap",
+      "path": "lidude-leap/index.html"
     }
   ]
 }
