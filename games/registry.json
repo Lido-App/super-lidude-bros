@@ -39,6 +39,11 @@
       "id": "lidude-leap",
       "name": "Lidude Leap",
       "path": "lidude-leap/index.html"
+    },
+    {
+      "id": "lidude-pinball",
+      "name": "Lido Pinball",
+      "path": "lidude-pinball/index.html"
     }
   ]
 }
