@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Lidude Leap</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: #0f172a;
+  color: white;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+#game {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#hud {
+  position: absolute;
+  top: 14px; left: 14px; right: 14px;
+  display: flex; justify-content: space-between;
+  pointer-events: none;
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  z-index: 5;
+}
+#score {
+  font-size: 34px;
+  background: rgba(0,0,0,0.35);
+  padding: 4px 14px;
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+}
+#best {
+  font-size: 14px;
+  background: rgba(0,0,0,0.35);
+  padding: 8px 12px;
+  border-radius: 10px;
+  align-self: flex-start;
+  backdrop-filter: blur(6px);
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  z-index: 10;
+  padding: 20px;
+  background: rgba(15,23,42,0.55);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
+}
+.overlay.hidden { display: none; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.logo {
+  font-size: 88px;
+  filter: drop-shadow(0 6px 16px rgba(34,197,94,0.5));
+  animation: bob 2.4s ease-in-out infinite;
+  margin-bottom: 6px;
+}
+img.logo-img {
+  display: block;
+  width: 130px;
+  height: 130px;
+  filter: drop-shadow(0 8px 20px rgba(34,197,94,0.55));
+  animation: bob 2.4s ease-in-out infinite;
+  margin: 0 auto 6px;
+  user-select: none; -webkit-user-drag: none;
+}
+img.logo-img.defeated {
+  animation: none;
+  transform: rotate(20deg);
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4)) grayscale(0.35) brightness(0.85);
+  opacity: 0.75;
+}
+@keyframes bob {
+  0%,100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-12px) rotate(4deg); }
+}
+h1 {
+  font-size: clamp(40px, 9vw, 68px);
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  background: linear-gradient(135deg, #fbbf24, #ff6b35);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  margin-bottom: 8px;
+}
+.tagline { color: rgba(255,255,255,0.85); font-size: 15px; margin-bottom: 28px; }
+.big-btn {
+  background: linear-gradient(135deg, #ff6b35, #ffb627);
+  color: white;
+  padding: 16px 36px;
+  border: none;
+  border-radius: 16px;
+  font: inherit;
+  font-weight: 900;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(255,107,53,0.45);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.big-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(255,107,53,0.6); }
+.big-btn:active { transform: translateY(0) scale(0.97); }
+.controls-hint {
+  margin-top: 24px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.8;
+}
+.controls-hint kbd {
+  background: rgba(255,255,255,0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+}
+.result {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 4px 0;
+  color: rgba(255,255,255,0.95);
+}
+.result span { color: #fbbf24; }
+.new-best {
+  display: inline-block;
+  background: linear-gradient(135deg, #fbbf24, #ff006e);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 10px;
+  font-size: 13px; font-weight: 800;
+  letter-spacing: 1px;
+  margin-top: 8px;
+  text-transform: uppercase;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+h2 {
+  font-size: 42px;
+  font-weight: 900;
+  margin-bottom: 14px;
+  letter-spacing: -1px;
+}
+.touch-hint {
+  position: absolute; bottom: 20px; left: 0; right: 0;
+  text-align: center; font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  pointer-events: none;
+  z-index: 5;
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div id="best">Best: 0</div>
+  <div id="score">0</div>
+</div>
+<div id="menu" class="overlay">
+  <img class="logo-img" src="lidude.svg" alt="Lidude" />
+  <h1>Lidude Leap</h1>
+  <div class="tagline">Bounce your Lidude to the stars ✨</div>
+  <button class="big-btn" id="start-btn">Tap to Start</button>
+  <div class="controls-hint">
+    Desktop: <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd><br>
+    Mobile: tap left or right side of screen
+  </div>
+</div>
+<div id="over" class="overlay hidden">
+  <img class="logo-img defeated" src="lidude.svg" alt="Lidude (defeated)" />
+  <h2>Oh no!</h2>
+  <div class="result">Score: <span id="final-score">0</span></div>
+  <div class="result" style="font-size: 16px; opacity: 0.8;">Best: <span id="final-best">0</span></div>
+  <div id="new-best-badge" class="new-best" style="display:none;">🏆 New Best!</div>
+  <button class="big-btn" id="retry-btn" style="margin-top: 24px;">Try Again</button>
+</div>
+<div class="touch-hint" id="touch-hint">Tap sides of screen to move</div>
+
+<script>
+// ================================================================
+// SETUP
+// ================================================================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// Lidude sprite — inline data URL so the canvas renders it even over file://
+const LIDUDE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240"><defs><linearGradient id="lr" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff006e"/><stop offset="33%" stop-color="#ffbe0b"/><stop offset="66%" stop-color="#3a86ff"/><stop offset="100%" stop-color="#8338ec"/></linearGradient></defs><line x1="92" y1="178" x2="78" y2="220" stroke="#a8b5e0" stroke-width="9" stroke-linecap="round"/><line x1="148" y1="178" x2="162" y2="220" stroke="#a8b5e0" stroke-width="9" stroke-linecap="round"/><ellipse cx="74" cy="223" rx="17" ry="7" fill="white" stroke="#1a1a2e" stroke-width="3.5"/><ellipse cx="166" cy="223" rx="17" ry="7" fill="white" stroke="#1a1a2e" stroke-width="3.5"/><path d="M 48 110 Q 22 130 30 168 Q 35 184 50 182" fill="none" stroke="#1a1a2e" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="44" cy="184" rx="13" ry="11" fill="white" stroke="#1a1a2e" stroke-width="3.5"/><path d="M 192 95 Q 212 75 205 48" fill="none" stroke="#1a1a2e" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="202" cy="42" rx="11" ry="13" fill="white" stroke="#1a1a2e" stroke-width="3.5"/><rect x="40" y="60" width="160" height="120" rx="8" fill="#3aac3e" stroke="#1a1a2e" stroke-width="4.5"/><rect x="44" y="64" width="42" height="42" fill="#1a1a2e"/><rect x="158" y="148" width="28" height="28" fill="url(#lr)" stroke="#1a1a2e" stroke-width="2.5"/><line x1="50" y1="78" x2="68" y2="78" stroke="#1a1a2e" stroke-width="3" stroke-linecap="round"/><line x1="48" y1="90" x2="62" y2="90" stroke="#1a1a2e" stroke-width="3" stroke-linecap="round"/><circle cx="103" cy="118" r="24" fill="white" stroke="#1a1a2e" stroke-width="4"/><circle cx="148" cy="118" r="24" fill="white" stroke="#1a1a2e" stroke-width="4"/><circle cx="108" cy="121" r="11" fill="#5a8fd6"/><circle cx="153" cy="121" r="11" fill="#5a8fd6"/><circle cx="109" cy="122" r="5" fill="#1a1a2e"/><circle cx="154" cy="122" r="5" fill="#1a1a2e"/><circle cx="106" cy="118" r="2.8" fill="white"/><circle cx="151" cy="118" r="2.8" fill="white"/><ellipse cx="125" cy="158" rx="6" ry="8" fill="#1a1a2e"/><ellipse cx="125" cy="159" rx="3" ry="4" fill="#fdba74"/></svg>`;
+const lidudeImg = new Image();
+let lidudeReady = false;
+let lidudeTriedFallback = false;
+lidudeImg.onload = () => { lidudeReady = true; };
+lidudeImg.onerror = () => {
+  if (!lidudeTriedFallback) {
+    lidudeTriedFallback = true;
+    lidudeImg.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(LIDUDE_SVG);
+  }
+};
+// Prefer the standalone file (easy to swap); fall back to inline if missing
+lidudeImg.src = 'lidude.svg';
+const menuEl = document.getElementById('menu');
+const overEl = document.getElementById('over');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const finalScoreEl = document.getElementById('final-score');
+const finalBestEl = document.getElementById('final-best');
+const newBestBadge = document.getElementById('new-best-badge');
+const touchHint = document.getElementById('touch-hint');
+
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ================================================================
+// CONSTANTS
+// ================================================================
+const GRAVITY = 0.42;
+const JUMP_POWER = 14;
+const SPRING_POWER = 24;
+const MOVE_ACCEL = 0.9;
+const MOVE_MAX = 8;
+const FRICTION = 0.88;
+const LIDUDE_SIZE = 62;     // display size on canvas
+const BLOOMY_SIZE = 50;     // collision size (smaller than sprite for friendlier hitbox)
+const PLATFORM_W = 84;
+const PLATFORM_H = 16;
+const SAVE_KEY = 'lidudeLeap.best';
+
+// ================================================================
+// STATE
+// ================================================================
+const player = { x: 0, y: 0, vx: 0, vy: 0, tilt: 0 };
+let platforms = [];
+let coins = [];
+let particles = [];
+let cameraY = 0;
+let score = 0;
+let best = parseInt(localStorage.getItem(SAVE_KEY) || '0');
+let highestReached = 0;  // most negative y
+let state = 'menu';  // menu | playing | over
+let keys = { left: false, right: false };
+let lastTime = 0;
+
+bestEl.textContent = `Best: ${best}`;
+
+// ================================================================
+// HELPERS
+// ================================================================
+function rand(a, b) { return a + Math.random() * (b - a); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpColor(c1, c2, t) {
+  const r1 = parseInt(c1.slice(1,3),16), g1 = parseInt(c1.slice(3,5),16), b1 = parseInt(c1.slice(5,7),16);
+  const r2 = parseInt(c2.slice(1,3),16), g2 = parseInt(c2.slice(3,5),16), b2 = parseInt(c2.slice(5,7),16);
+  return `rgb(${Math.round(lerp(r1,r2,t))},${Math.round(lerp(g1,g2,t))},${Math.round(lerp(b1,b2,t))})`;
+}
+
+// ================================================================
+// AUDIO
+// ================================================================
+let audioCtx = null;
+function tone(freq, dur = 0.1, type = 'sine', gain = 0.12) {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return; } }
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, now);
+  g.gain.setValueAtTime(gain, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  osc.connect(g); g.connect(audioCtx.destination);
+  osc.start(now); osc.stop(now + dur);
+}
+function sfxJump(spring) { tone(spring ? 1200 : 720, spring ? 0.22 : 0.1, 'triangle', 0.14); }
+function sfxCoin() { tone(1320, 0.08); setTimeout(()=>tone(1760,0.1),60); }
+function sfxBreak() { tone(180, 0.2, 'sawtooth', 0.1); }
+function sfxDeath() {
+  tone(440, 0.15, 'sawtooth', 0.14);
+  setTimeout(()=>tone(330, 0.2, 'sawtooth', 0.14), 140);
+  setTimeout(()=>tone(220, 0.35, 'sawtooth', 0.14), 320);
+}
+
+// ================================================================
+// GAME INIT
+// ================================================================
+function spawnPlatform(y) {
+  const alt = Math.min(1, highestReached / -12000);
+  const x = rand(10, W - PLATFORM_W - 10);
+  let type = 'normal';
+  const r = Math.random();
+  if (r < 0.04 + alt * 0.03) type = 'spring';
+  else if (r < 0.12 + alt * 0.22) type = 'break';
+  else if (r < 0.22 + alt * 0.3) type = 'move';
+  platforms.push({
+    x, y, type,
+    vx: type === 'move' ? (Math.random() < 0.5 ? -1.6 : 1.6) * (1 + alt * 0.8) : 0,
+    broken: false,
+    bounce: 0,
+  });
+  // Sometimes a coin floats above
+  if (Math.random() < 0.12) {
+    coins.push({ x: x + PLATFORM_W/2, y: y - 44, collected: false, phase: Math.random()*Math.PI*2 });
+  }
+}
+
+function initGame() {
+  platforms = [];
+  coins = [];
+  particles = [];
+  cameraY = 0;
+  score = 0;
+  highestReached = 0;
+  player.x = W/2;
+  player.y = H - 140;
+  player.vx = 0;
+  player.vy = -JUMP_POWER;
+  player.tilt = 0;
+  // Ground platform
+  platforms.push({ x: W/2 - PLATFORM_W/2, y: H - 90, type: 'normal', vx: 0, broken: false, bounce: 0 });
+  // Initial fill
+  for (let y = H - 160; y > -400; y -= 60 + Math.random()*30) {
+    spawnPlatform(y);
+  }
+}
+
+// ================================================================
+// UPDATE
+// ================================================================
+function update(dt) {
+  if (state !== 'playing') return;
+
+  // Input
+  if (keys.left) player.vx -= MOVE_ACCEL;
+  if (keys.right) player.vx += MOVE_ACCEL;
+  if (!keys.left && !keys.right) player.vx *= FRICTION;
+  player.vx = Math.max(-MOVE_MAX, Math.min(MOVE_MAX, player.vx));
+  player.tilt = player.vx * 0.05;
+
+  // Physics
+  player.vy += GRAVITY;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // Horizontal wrap
+  if (player.x < -BLOOMY_SIZE/2) player.x = W + BLOOMY_SIZE/2;
+  if (player.x > W + BLOOMY_SIZE/2) player.x = -BLOOMY_SIZE/2;
+
+  // Platform collision (only while falling)
+  if (player.vy > 0) {
+    for (const p of platforms) {
+      if (p.broken) continue;
+      const py = p.y - cameraY;
+      const px = p.x;
+      if (player.x > px && player.x < px + PLATFORM_W &&
+          player.y + BLOOMY_SIZE/2 > py && player.y + BLOOMY_SIZE/2 < py + PLATFORM_H + 8) {
+        if (p.type === 'spring') {
+          player.vy = -SPRING_POWER;
+          sfxJump(true);
+          burstParticles(player.x, py, '#fbbf24', 10);
+        } else {
+          player.vy = -JUMP_POWER;
+          sfxJump(false);
+        }
+        p.bounce = 1;
+        if (p.type === 'break') {
+          setTimeout(() => { p.broken = true; sfxBreak(); burstParticles(px + PLATFORM_W/2, py, '#92400e', 8); }, 50);
+        }
+      }
+    }
+  }
+
+  // Move platforms
+  for (const p of platforms) {
+    if (p.type === 'move') {
+      p.x += p.vx;
+      if (p.x < 0) { p.x = 0; p.vx *= -1; }
+      if (p.x > W - PLATFORM_W) { p.x = W - PLATFORM_W; p.vx *= -1; }
+    }
+    if (p.bounce > 0) p.bounce = Math.max(0, p.bounce - 0.08);
+  }
+
+  // Camera follow (only when rising)
+  const camAnchor = H * 0.4;
+  if (player.y < camAnchor) {
+    const diff = camAnchor - player.y;
+    player.y = camAnchor;
+    cameraY -= diff;
+    highestReached = Math.min(highestReached, cameraY);
+  }
+
+  // Score = altitude climbed
+  score = Math.max(score, Math.floor(-highestReached));
+
+  // Coins
+  for (const c of coins) {
+    if (c.collected) continue;
+    c.phase += 0.1;
+    const cy = c.y - cameraY + Math.sin(c.phase) * 4;
+    const dx = c.x - player.x;
+    const dy = cy - player.y;
+    if (dx*dx + dy*dy < 34*34) {
+      c.collected = true;
+      score += 100;
+      sfxCoin();
+      for (let i = 0; i < 8; i++) burstParticles(c.x, cy, '#fbbf24', 1);
+      particles.push({ x: c.x, y: cy, vx: 0, vy: -2, life: 1, text: '+100', color: '#fbbf24' });
+    }
+  }
+
+  // Particles
+  for (const p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.2;
+    p.life -= 0.025;
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  // Cull below
+  platforms = platforms.filter(p => p.y - cameraY < H + 100);
+  coins = coins.filter(c => !c.collected && c.y - cameraY < H + 100);
+
+  // Spawn more above
+  let highestPlatY = Infinity;
+  for (const p of platforms) if (p.y < highestPlatY) highestPlatY = p.y;
+  const alt = Math.min(1, -highestReached / 12000);
+  const minGap = 55 + alt * 30;
+  const maxGap = 85 + alt * 55;
+  while (highestPlatY > cameraY - 300) {
+    highestPlatY -= rand(minGap, maxGap);
+    spawnPlatform(highestPlatY);
+  }
+
+  // Fall = game over
+  if (player.y > H + 60) {
+    endGame();
+  }
+
+  scoreEl.textContent = score;
+}
+
+function burstParticles(x, y, color, n = 6) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = rand(1, 4);
+    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - 1, life: 1, color, text: null });
+  }
+}
+
+// ================================================================
+// RENDER
+// ================================================================
+function drawSky() {
+  const alt = Math.min(1, -highestReached / 14000);
+  const topCol = lerpColor('#6cc5f2', '#0a0a1a', alt);
+  const botCol = lerpColor('#b8e3f5', '#3b1e5e', alt);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, topCol);
+  g.addColorStop(1, botCol);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars kicking in as we get higher
+  if (alt > 0.3) {
+    const starAlpha = Math.min(1, (alt - 0.3) / 0.5);
+    ctx.fillStyle = `rgba(255,255,255,${starAlpha})`;
+    // Deterministic stars based on altitude position
+    const seedOffset = Math.floor(-cameraY / 2);
+    for (let i = 0; i < 40; i++) {
+      const x = ((i * 127 + seedOffset * 0.3) % W + W) % W;
+      const y = ((i * 83 + seedOffset * 0.6) % H + H) % H;
+      const sz = (i % 3 === 0) ? 2.5 : 1.5;
+      ctx.fillRect(x, y, sz, sz);
+    }
+  }
+
+  // Clouds as parallax (low-altitude only)
+  if (alt < 0.7) {
+    ctx.fillStyle = `rgba(255,255,255,${0.6 * (1 - alt)})`;
+    const camPar = cameraY * 0.25;
+    for (let i = 0; i < 6; i++) {
+      const cx = ((i * 220 + camPar * 0.5) % (W + 200) + (W + 200)) % (W + 200) - 100;
+      const cy = ((i * 160 + camPar) % (H + 200) + (H + 200)) % (H + 200) - 100;
+      drawCloud(cx, cy, 40 + (i % 3) * 16);
+    }
+  }
+}
+
+function drawCloud(x, y, r) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI*2);
+  ctx.arc(x + r*0.8, y - r*0.2, r*0.8, 0, Math.PI*2);
+  ctx.arc(x + r*1.6, y, r*0.9, 0, Math.PI*2);
+  ctx.arc(x + r*0.8, y + r*0.1, r*0.8, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function drawRoundRect(x, y, w, h, r, fillStyle, strokeStyle) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  if (fillStyle) { ctx.fillStyle = fillStyle; ctx.fill(); }
+  if (strokeStyle) { ctx.strokeStyle = strokeStyle; ctx.lineWidth = 2; ctx.stroke(); }
+}
+
+function drawPlatform(p) {
+  const py = p.y - cameraY;
+  if (py < -30 || py > H + 30) return;
+  const squish = p.bounce;
+  const h = PLATFORM_H * (1 - squish * 0.3);
+  const yOff = PLATFORM_H * squish * 0.3;
+  let fill, stroke, topColor;
+  if (p.type === 'spring')      { fill = '#fbbf24'; stroke = '#b45309'; topColor = '#fde68a'; }
+  else if (p.type === 'break')  { fill = '#92400e'; stroke = '#451a03'; topColor = '#c05621'; }
+  else if (p.type === 'move')   { fill = '#3b82f6'; stroke = '#1d4ed8'; topColor = '#93c5fd'; }
+  else                           { fill = '#22c55e'; stroke = '#15803d'; topColor = '#86efac'; }
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  drawRoundRect(p.x + 2, py + yOff + 3, PLATFORM_W, h, 8, 'rgba(0,0,0,0.25)', null);
+  // Main body
+  drawRoundRect(p.x, py + yOff, PLATFORM_W, h, 8, fill, stroke);
+  // Top highlight
+  ctx.fillStyle = topColor;
+  ctx.fillRect(p.x + 4, py + yOff + 2, PLATFORM_W - 8, 3);
+
+  // Decorations
+  if (p.type === 'spring') {
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#7c2d12';
+    ctx.fillText('↑↑', p.x + PLATFORM_W/2, py + yOff + h/2);
+  } else if (p.type === 'break') {
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(p.x + 16, py + yOff + 3);
+    ctx.lineTo(p.x + 22, py + yOff + h - 3);
+    ctx.moveTo(p.x + 50, py + yOff + 3);
+    ctx.lineTo(p.x + 56, py + yOff + h - 3);
+    ctx.stroke();
+  } else if (p.type === 'move') {
+    // little arrows
+    ctx.fillStyle = '#dbeafe';
+    ctx.beginPath();
+    ctx.moveTo(p.x + 8, py + yOff + h/2);
+    ctx.lineTo(p.x + 14, py + yOff + 4);
+    ctx.lineTo(p.x + 14, py + yOff + h - 4);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(p.x + PLATFORM_W - 8, py + yOff + h/2);
+    ctx.lineTo(p.x + PLATFORM_W - 14, py + yOff + 4);
+    ctx.lineTo(p.x + PLATFORM_W - 14, py + yOff + h - 4);
+    ctx.closePath(); ctx.fill();
+  } else {
+    // tiny grass tufts
+    ctx.fillStyle = '#16a34a';
+    for (let i = 0; i < 3; i++) {
+      const tx = p.x + 14 + i * 24;
+      ctx.fillRect(tx, py + yOff - 3, 2, 4);
+      ctx.fillRect(tx + 4, py + yOff - 5, 2, 6);
+      ctx.fillRect(tx + 8, py + yOff - 3, 2, 4);
+    }
+  }
+}
+
+function drawLidude() {
+  // Ground shadow (stays flat regardless of tilt/flip)
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.beginPath();
+  ctx.ellipse(player.x, player.y + LIDUDE_SIZE/2 + 4, LIDUDE_SIZE/2.6, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  // Face left when moving left (sprite's natural facing is right-ish)
+  const facingLeft = player.vx < -0.6;
+  const sx = facingLeft ? -1 : 1;
+  ctx.scale(sx, 1);
+  // Tilt based on horizontal velocity (undo flip's effect on tilt sign)
+  ctx.rotate(player.tilt * sx);
+  // Squish a touch on upward launch for juice
+  const sq = player.vy < -10 ? 1 + Math.min(0.15, (-player.vy - 10) * 0.02) : 1;
+  ctx.scale(1, sq);
+
+  if (lidudeReady) {
+    ctx.drawImage(lidudeImg, -LIDUDE_SIZE/2, -LIDUDE_SIZE/2, LIDUDE_SIZE, LIDUDE_SIZE);
+  } else {
+    // Fallback block while sprite loads
+    ctx.fillStyle = '#3aac3e';
+    ctx.fillRect(-LIDUDE_SIZE/2, -LIDUDE_SIZE/2, LIDUDE_SIZE, LIDUDE_SIZE);
+  }
+  ctx.restore();
+}
+
+function drawCoin(c) {
+  const cy = c.y - cameraY + Math.sin(c.phase) * 4;
+  if (cy < -30 || cy > H + 30) return;
+  // glow
+  const g = ctx.createRadialGradient(c.x, cy, 2, c.x, cy, 28);
+  g.addColorStop(0, 'rgba(251,191,36,0.6)');
+  g.addColorStop(1, 'rgba(251,191,36,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(c.x - 30, cy - 30, 60, 60);
+  ctx.font = '28px "Apple Color Emoji","Segoe UI Emoji",system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🪙', c.x, cy);
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    if (p.text) {
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 16px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(p.text, p.x, p.y);
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function render() {
+  drawSky();
+  for (const p of platforms) drawPlatform(p);
+  for (const c of coins) if (!c.collected) drawCoin(c);
+  drawLidude();
+  drawParticles();
+}
+
+// ================================================================
+// LOOP
+// ================================================================
+function loop(t) {
+  const dt = Math.min(32, t - lastTime);
+  lastTime = t;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ================================================================
+// GAME FLOW
+// ================================================================
+function startGame() {
+  initGame();
+  state = 'playing';
+  menuEl.classList.add('hidden');
+  overEl.classList.add('hidden');
+  touchHint.style.display = 'none';
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
+}
+
+function endGame() {
+  state = 'over';
+  sfxDeath();
+  finalScoreEl.textContent = score;
+  finalBestEl.textContent = best;
+  newBestBadge.style.display = 'none';
+  if (score > best) {
+    best = score;
+    localStorage.setItem(SAVE_KEY, best);
+    bestEl.textContent = `Best: ${best}`;
+    finalBestEl.textContent = best;
+    newBestBadge.style.display = 'inline-block';
+  }
+  setTimeout(() => overEl.classList.remove('hidden'), 600);
+}
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('retry-btn').addEventListener('click', startGame);
+
+// ================================================================
+// INPUT
+// ================================================================
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+  if (e.key === ' ' || e.key === 'Enter') {
+    if (state === 'menu') startGame();
+    else if (state === 'over') startGame();
+  }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+});
+
+// Touch controls: left/right halves of screen
+function touchStart(e) {
+  if (state !== 'playing') return;
+  for (const t of e.touches) {
+    if (t.clientX < W/2) keys.left = true;
+    else keys.right = true;
+  }
+}
+function touchEnd(e) {
+  keys.left = false;
+  keys.right = false;
+  for (const t of e.touches) {
+    if (t.clientX < W/2) keys.left = true;
+    else keys.right = true;
+  }
+}
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); touchStart(e); }, { passive: false });
+canvas.addEventListener('touchmove',  (e) => { e.preventDefault(); touchEnd(e); }, { passive: false });
+canvas.addEventListener('touchend',   (e) => { e.preventDefault(); touchEnd(e); }, { passive: false });
+canvas.addEventListener('touchcancel',(e) => { e.preventDefault(); keys.left = false; keys.right = false; }, { passive: false });
+
+// Mouse down/up as desktop fallback for quick testing
+canvas.addEventListener('mousedown', (e) => {
+  if (state !== 'playing') return;
+  if (e.clientX < W/2) keys.left = true; else keys.right = true;
+});
+canvas.addEventListener('mouseup', () => { keys.left = false; keys.right = false; });
+canvas.addEventListener('mouseleave', () => { keys.left = false; keys.right = false; });
+
+// ================================================================
+// INITIAL BACKGROUND RENDER (so menu isn't on empty black)
+// ================================================================
+initGame();
+state = 'menu';
+</script>
+</body>
+</html>
