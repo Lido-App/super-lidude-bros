@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+<title>Lidude Whack</title>
+<style>
+  :root{ --ink:#1a1a2e; --grass:#3aac3e; --paper:#fdf6e3; --berry:#ff006e; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#1a1a2e;color:#fff;}
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{display:block;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.6);touch-action:none;cursor:crosshair;
+    background:linear-gradient(180deg,#7ec8e3 0%,#5fa8d3 55%,#3aac3e 56%,#2a8632 100%);}
+
+  #hud{position:fixed;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:14px;align-items:center;pointer-events:none;z-index:5;}
+  .pill{
+    background:rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    padding:8px 14px;border-radius:999px;border:1.5px solid rgba(255,255,255,.18);
+    font-weight:700;font-size:13px;letter-spacing:.5px;display:flex;align-items:center;gap:6px;
+  }
+  .pill .num{font-variant-numeric:tabular-nums;font-size:18px;color:#ffd166;}
+  .pill .lbl{opacity:.8;font-size:10px;text-transform:uppercase;}
+  .pill.timer .num{color:#fff;}
+  .pill.danger .num{color:#ff6b8b;}
+
+  #floater{position:fixed;left:50%;top:78px;transform:translate(-50%,-10px);opacity:0;pointer-events:none;z-index:5;
+    font-weight:900;font-size:24px;color:#ffd166;text-shadow:0 2px 0 #1a1a2e;
+    transition:opacity .15s,transform .15s;}
+  #floater.show{opacity:1;transform:translate(-50%,0);}
+
+  .panel{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;
+    background:radial-gradient(ellipse at center,rgba(0,0,0,.55) 0%,rgba(0,0,0,.85) 80%);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+  .panel.hidden{display:none;}
+  .card{
+    background:linear-gradient(180deg,#fdf6e3 0%,#f4e8c8 100%);
+    color:var(--ink);border-radius:24px;padding:30px 26px;text-align:center;
+    border:4px solid var(--ink);box-shadow:0 14px 0 var(--ink),0 30px 60px rgba(0,0,0,.5);
+    max-width:340px;width:88%;
+    animation:pop .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop{from{opacity:0;transform:scale(.85) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
+  .card h1{font-size:34px;letter-spacing:-.5px;margin-bottom:6px;line-height:1;}
+  .card .tag{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#8b5e34;margin-bottom:18px;}
+  .card p{font-size:14px;color:#5b4a2a;margin:12px 0;line-height:1.5;}
+  .stat-row{display:flex;justify-content:space-around;margin:18px 0;padding:14px 0;border-top:2px dashed #d2b890;border-bottom:2px dashed #d2b890;}
+  .stat{display:flex;flex-direction:column;gap:2px;}
+  .stat .v{font-size:24px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#8b5e34;}
+  .btn{display:inline-block;background:var(--grass);color:white;padding:14px 30px;border-radius:14px;
+    font-weight:900;font-size:17px;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);
+    cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:transform .08s,box-shadow .08s;user-select:none;}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink);}
+  .btn.alt{background:#fdba74;}
+  .btn.row{margin:0 4px;}
+  .legend{display:flex;justify-content:center;gap:18px;margin:14px 0 4px 0;font-size:12px;color:#5b4a2a;}
+  .swatch{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:middle;margin-right:5px;border:2px solid #1a1a2e;}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="game"></canvas></div>
+
+<div id="hud">
+  <div class="pill"><span class="lbl">Score</span><span class="num" id="score">0</span></div>
+  <div class="pill timer"><span class="lbl">Time</span><span class="num" id="time">60</span></div>
+  <div class="pill danger"><span class="lbl">Misses</span><span class="num" id="misses">0/3</span></div>
+</div>
+<div id="floater">+1</div>
+
+<div id="menu" class="panel">
+  <div class="card">
+    <h1>Lidude Whack</h1>
+    <div class="tag">tap · score · don't whiff</div>
+    <p><b>Tap the green Lidudes</b> when they pop up. 60 seconds to score as much as you can.</p>
+    <div class="legend">
+      <span><span class="swatch" style="background:#3aac3e"></span>+1 (combo +)</span>
+      <span><span class="swatch" style="background:#ffd166"></span>+5 GOLD</span>
+      <span><span class="swatch" style="background:#e63946"></span>−2 BAD!</span>
+    </div>
+    <p style="font-size:13px;">Miss <b>3 greens</b> and the round ends early. Avoid the angry red ones.</p>
+    <div class="stat-row">
+      <div class="stat"><span class="v" id="bestMenu">0</span><span class="l">best</span></div>
+      <div class="stat"><span class="v" id="totalMenu">0</span><span class="l">whacked</span></div>
+    </div>
+    <div class="btn" id="playBtn">Whack Time</div>
+  </div>
+</div>
+
+<div id="over" class="panel hidden">
+  <div class="card">
+    <h1 id="overTitle">Time!</h1>
+    <div class="tag" id="overTag">good whacking</div>
+    <div class="stat-row">
+      <div class="stat"><span class="v" id="finalScore">0</span><span class="l">score</span></div>
+      <div class="stat"><span class="v" id="finalBest">0</span><span class="l">best</span></div>
+    </div>
+    <div class="stat-row" style="margin-top:0;border-top:none;">
+      <div class="stat"><span class="v" id="hitsStat">0</span><span class="l">hits</span></div>
+      <div class="stat"><span class="v" id="accStat">0%</span><span class="l">accuracy</span></div>
+      <div class="stat"><span class="v" id="bestComboStat">0</span><span class="l">best combo</span></div>
+    </div>
+    <div class="btn row" id="againBtn">Again</div>
+    <div class="btn alt row" id="menuBtn">Menu</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- Lidude SVG (green, default) ---------- */
+const LIDUDE_SVG_BASE = (bodyColor)=>`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><defs><linearGradient id='r' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='%23ff006e'/><stop offset='33%' stop-color='%23ffbe0b'/><stop offset='66%' stop-color='%233a86ff'/><stop offset='100%' stop-color='%238338ec'/></linearGradient></defs><line x1='92' y1='178' x2='78' y2='220' stroke='%23a8b5e0' stroke-width='9' stroke-linecap='round'/><line x1='148' y1='178' x2='162' y2='220' stroke='%23a8b5e0' stroke-width='9' stroke-linecap='round'/><ellipse cx='74' cy='223' rx='17' ry='7' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><ellipse cx='166' cy='223' rx='17' ry='7' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><path d='M 48 110 Q 22 130 30 168 Q 35 184 50 182' fill='none' stroke='%231a1a2e' stroke-width='4.5' stroke-linecap='round'/><ellipse cx='44' cy='184' rx='13' ry='11' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><path d='M 192 95 Q 212 75 205 48' fill='none' stroke='%231a1a2e' stroke-width='4.5' stroke-linecap='round'/><ellipse cx='202' cy='42' rx='11' ry='13' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><rect x='40' y='60' width='160' height='120' rx='8' fill='${bodyColor}' stroke='%231a1a2e' stroke-width='4.5'/><rect x='44' y='64' width='42' height='42' fill='%231a1a2e'/><rect x='158' y='148' width='28' height='28' fill='url(%23r)' stroke='%231a1a2e' stroke-width='2.5'/><line x1='50' y1='78' x2='68' y2='78' stroke='%231a1a2e' stroke-width='3' stroke-linecap='round'/><line x1='48' y1='90' x2='62' y2='90' stroke='%231a1a2e' stroke-width='3' stroke-linecap='round'/><circle cx='103' cy='118' r='24' fill='white' stroke='%231a1a2e' stroke-width='4'/><circle cx='148' cy='118' r='24' fill='white' stroke='%231a1a2e' stroke-width='4'/><circle cx='108' cy='121' r='11' fill='%235a8fd6'/><circle cx='153' cy='121' r='11' fill='%235a8fd6'/><circle cx='109' cy='122' r='5' fill='%231a1a2e'/><circle cx='154' cy='122' r='5' fill='%231a1a2e'/><circle cx='106' cy='118' r='2.8' fill='white'/><circle cx='151' cy='118' r='2.8' fill='white'/><ellipse cx='125' cy='158' rx='6' ry='8' fill='%231a1a2e'/><ellipse cx='125' cy='159' rx='3' ry='4' fill='%23fdba74'/></svg>`;
+
+const sprites = {
+  green: { src: LIDUDE_SVG_BASE('%233aac3e'), img: new Image(), ready: false },
+  gold:  { src: LIDUDE_SVG_BASE('%23ffd166'), img: new Image(), ready: false },
+  bad:   { src: LIDUDE_SVG_BASE('%23e63946'), img: new Image(), ready: false },
+};
+for (const k in sprites){
+  const s = sprites[k];
+  s.img.onload = ()=>{ s.ready = true; };
+  s.img.src = s.src;
+}
+
+/* ---------- Canvas ---------- */
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+let W=0, H=0, DPR=1;
+function fit(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  const aspect = 9/16;
+  const maxW = Math.min(window.innerWidth - 16, 460);
+  const maxH = window.innerHeight - 16;
+  let cw = maxW, ch = maxW/aspect;
+  if (ch > maxH){ ch = maxH; cw = ch * aspect; }
+  W = Math.floor(cw); H = Math.floor(ch);
+  cvs.style.width = W+'px'; cvs.style.height = H+'px';
+  cvs.width = Math.floor(W*DPR); cvs.height = Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+fit(); window.addEventListener('resize', fit);
+
+/* ---------- Audio ---------- */
+let actx;
+function audio(){ if(!actx) try{actx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){} return actx; }
+function tone(f,d=0.07,t='square',v=0.13){
+  const a=audio(); if(!a) return;
+  const o=a.createOscillator(); const g=a.createGain();
+  o.type=t; o.frequency.value=f; g.gain.value=v;
+  o.connect(g); g.connect(a.destination);
+  const ti=a.currentTime; g.gain.setValueAtTime(v,ti);
+  g.gain.exponentialRampToValueAtTime(0.001, ti+d);
+  o.start(ti); o.stop(ti+d);
+}
+function sfxBonk(combo){ tone(420 + Math.min(combo,10)*30, 0.06, 'square', 0.14); }
+function sfxGold(){ tone(660,0.06,'triangle',0.14); setTimeout(()=>tone(880,0.08,'triangle',0.14),50); setTimeout(()=>tone(1100,0.1,'triangle',0.13),100); }
+function sfxBad(){ tone(150,0.16,'sawtooth',0.18); }
+function sfxMiss(){ tone(220,0.12,'sine',0.1); }
+function sfxEnd(){ tone(440,0.1,'square',0.15); setTimeout(()=>tone(330,0.1,'square',0.14),120); setTimeout(()=>tone(220,0.18,'square',0.14),240); }
+
+/* ---------- Game state ---------- */
+const STATE = { menu:0, play:1, over:2 };
+let state = STATE.menu;
+
+const COLS = 3, ROWS = 3;
+let holes = []; // {x,y, lidude:null|{kind, popFrame, lifeFrames, hit:false, missCounted:false}}
+let particles = [];
+let smacks = []; // visual smack marks {x,y,life}
+
+let score = 0;
+let combo = 0;
+let bestCombo = 0;
+let hits = 0;
+let misses = 0;        // missed greens (didn't tap before going down)
+let attempts = 0;       // total taps
+let totalWhacked = +(localStorage.getItem('lidudeWhack.total')||0);
+let best = +(localStorage.getItem('lidudeWhack.best')||0);
+
+const ROUND_SECS = 60;
+let timeLeft = ROUND_SECS;
+let frame = 0;
+let nextSpawnFrame = 0;
+
+/* ---------- Input ---------- */
+cvs.addEventListener('pointerdown', e=>{
+  audio();
+  if (state !== STATE.play) return;
+  const r = cvs.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  attempts++;
+  let hitOne = false;
+  for (const h of holes){
+    if (!h.lidude) continue;
+    if (h.lidude.hit) continue;
+    if (h.lidude.popFrame < 4) continue; // can't tap before they're up
+    const lid = h.lidude;
+    const t = visibleT(lid);
+    if (t < 0.35) continue;
+    const lx = h.x;
+    const ly = h.y - 30 - t * 36; // up to 36px above hole rim
+    const size = 96;
+    if (Math.abs(px - lx) < size*0.4 && py > ly - size*0.5 && py < ly + size*0.4){
+      whack(h, px, py);
+      hitOne = true;
+      break;
+    }
+  }
+  if (!hitOne){
+    // miss - small smack mark
+    smacks.push({ x: px, y: py, life: 18, color: '#ffffff' });
+    sfxMiss();
+  }
+});
+
+function visibleT(lid){
+  const POP = 8, HOLD_PCT = 0.6;
+  const total = lid.lifeFrames;
+  if (lid.popFrame < POP) return lid.popFrame / POP;
+  if (lid.popFrame > total - POP) return Math.max(0, (total - lid.popFrame) / POP);
+  return 1;
+}
+
+function whack(h, px, py){
+  const lid = h.lidude;
+  lid.hit = true;
+  hits++;
+  totalWhacked++;
+  smacks.push({ x: px, y: py, life: 22, color: lid.kind === 'bad' ? '#e63946' : '#fff' });
+  if (lid.kind === 'bad'){
+    score = Math.max(0, score - 2);
+    combo = 0;
+    sfxBad();
+    burst(h.x, h.y - 40, '#e63946');
+    flash('-2 BAD!', '#ff6b8b');
+  } else if (lid.kind === 'gold'){
+    score += 5;
+    combo += 1;
+    sfxGold();
+    burst(h.x, h.y - 40, '#ffd166');
+    flash('+5 GOLD!', '#ffd166');
+  } else {
+    combo += 1;
+    const bonus = combo >= 3 ? 2 : 1;
+    score += bonus;
+    sfxBonk(combo);
+    burst(h.x, h.y - 40, '#3aac3e');
+    if (combo >= 3) flash(combo + '× +' + bonus, '#ffd166');
+    else flash('+' + bonus, '#fff');
+  }
+  if (combo > bestCombo) bestCombo = combo;
+  // schedule lidude to retreat fast
+  lid.popFrame = Math.max(lid.popFrame, lid.lifeFrames - 6);
+  syncHUD();
+}
+
+function burst(x, y, color){
+  for (let i = 0; i < 14; i++){
+    particles.push({
+      x, y,
+      vx: (Math.random()-0.5)*7,
+      vy: -2 + Math.random()*-4,
+      life: 32, color,
+    });
+  }
+}
+
+function flash(text, color){
+  const el = document.getElementById('floater');
+  el.textContent = text;
+  el.style.color = color;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 500);
+}
+
+/* ---------- Round flow ---------- */
+function setupHoles(){
+  holes = [];
+  // grid of holes — leave room for HUD
+  const usableTop = 70;
+  const usableBot = H - 30;
+  const gridH = usableBot - usableTop;
+  const cellH = gridH / ROWS;
+  const cellW = W / COLS;
+  for (let r = 0; r < ROWS; r++){
+    for (let c = 0; c < COLS; c++){
+      holes.push({
+        x: cellW * (c + 0.5),
+        y: usableTop + cellH * (r + 0.85),
+        lidude: null,
+      });
+    }
+  }
+}
+
+function start(){
+  state = STATE.play;
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  setupHoles();
+  particles = []; smacks = [];
+  score = 0; combo = 0; bestCombo = 0; hits = 0; misses = 0; attempts = 0;
+  timeLeft = ROUND_SECS;
+  frame = 0; nextSpawnFrame = 30;
+  syncHUD();
+}
+
+function endRound(reason){
+  state = STATE.over;
+  sfxEnd();
+  if (score > best){ best = score; localStorage.setItem('lidudeWhack.best', best); }
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalBest').textContent = best;
+  document.getElementById('hitsStat').textContent = hits;
+  document.getElementById('accStat').textContent = attempts ? Math.round(hits / attempts * 100) + '%' : '—';
+  document.getElementById('bestComboStat').textContent = bestCombo;
+  document.getElementById('overTitle').textContent = reason === 'misses' ? 'Too Many Misses' : 'Time!';
+  document.getElementById('overTag').textContent = reason === 'misses' ? 'they keep getting away' : 'good whacking';
+  document.getElementById('over').classList.remove('hidden');
+  syncHUD();
+}
+
+function spawnLidude(){
+  // pick a free hole
+  const free = holes.filter(h => !h.lidude);
+  if (free.length === 0) return;
+  const h = free[Math.floor(Math.random() * free.length)];
+  // difficulty curve over the round (0..1)
+  const t = 1 - (timeLeft / ROUND_SECS);
+  // composition: bad chance ramps from 8% to 28%; gold = 8% always
+  const goldChance = 0.08;
+  const badChance = 0.08 + t * 0.20;
+  const r = Math.random();
+  let kind = 'green';
+  if (r < goldChance) kind = 'gold';
+  else if (r < goldChance + badChance) kind = 'bad';
+  // life frames: starts at 80, drops to 36
+  const life = Math.floor(80 - t * 44);
+  h.lidude = {
+    kind,
+    popFrame: 0,
+    lifeFrames: life,
+    hit: false,
+    missCounted: false,
+  };
+}
+
+function update(){
+  if (state !== STATE.play) return;
+  frame++;
+  if (frame % 60 === 0){
+    timeLeft--;
+    if (timeLeft <= 0){ timeLeft = 0; endRound('time'); return; }
+    syncHUD();
+  }
+
+  // spawning rate: every 24 → 14 frames as time passes
+  const t = 1 - (timeLeft / ROUND_SECS);
+  const spawnEvery = Math.floor(28 - t * 14);
+  // sometimes 2 at once
+  if (frame >= nextSpawnFrame){
+    spawnLidude();
+    if (t > 0.4 && Math.random() < 0.25) spawnLidude();
+    nextSpawnFrame = frame + spawnEvery;
+  }
+
+  // tick lidude lifetimes
+  for (const h of holes){
+    if (!h.lidude) continue;
+    h.lidude.popFrame++;
+    if (h.lidude.popFrame >= h.lidude.lifeFrames){
+      // gone — count miss only if it was a green/gold and not hit
+      if (!h.lidude.hit && (h.lidude.kind === 'green' || h.lidude.kind === 'gold')){
+        misses++;
+        combo = 0;
+        sfxMiss();
+        if (misses >= 3){
+          h.lidude = null;
+          syncHUD();
+          endRound('misses');
+          return;
+        }
+      }
+      h.lidude = null;
+    }
+  }
+
+  // particles
+  for (let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+    p.vy += 0.4; p.x += p.vx; p.y += p.vy;
+    p.life--;
+    if (p.life <= 0) particles.splice(i,1);
+  }
+  // smacks fade
+  for (let i = smacks.length - 1; i >= 0; i--){
+    smacks[i].life--;
+    if (smacks[i].life <= 0) smacks.splice(i,1);
+  }
+  syncHUD();
+}
+
+/* ---------- Render ---------- */
+function clearBG(){
+  // sky → grass split
+  const skyEnd = H * 0.32;
+  const sky = ctx.createLinearGradient(0,0,0,skyEnd);
+  sky.addColorStop(0, '#8ec5dd');
+  sky.addColorStop(1, '#6da5c5');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,skyEnd);
+  const grass = ctx.createLinearGradient(0, skyEnd, 0, H);
+  grass.addColorStop(0, '#3aac3e');
+  grass.addColorStop(1, '#1f7223');
+  ctx.fillStyle = grass;
+  ctx.fillRect(0, skyEnd, W, H - skyEnd);
+  // hill curve hint
+  ctx.fillStyle = '#46b94a';
+  ctx.beginPath();
+  ctx.moveTo(0, skyEnd);
+  ctx.quadraticCurveTo(W*0.5, skyEnd - 12, W, skyEnd);
+  ctx.lineTo(W, skyEnd + 6);
+  ctx.lineTo(0, skyEnd + 6);
+  ctx.closePath();
+  ctx.fill();
+
+  // simple cloud
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  for (const c of clouds) {
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, c.r*1.4, c.r*0.6, 0, 0, Math.PI*2);
+    ctx.ellipse(c.x - c.r*0.6, c.y + 4, c.r*0.8, c.r*0.5, 0, 0, Math.PI*2);
+    ctx.ellipse(c.x + c.r*0.7, c.y + 4, c.r*0.7, c.r*0.45, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+const clouds = [];
+function seedClouds(){
+  clouds.length = 0;
+  for (let i = 0; i < 4; i++){
+    clouds.push({ x: Math.random()*W, y: 18 + Math.random()*40, r: 14 + Math.random()*14 });
+  }
+}
+seedClouds();
+window.addEventListener('resize', seedClouds);
+
+function drawHole(h){
+  // shadow / hole
+  ctx.save();
+  // outer dirt mound
+  ctx.fillStyle = '#8d6a3a';
+  ctx.beginPath();
+  ctx.ellipse(h.x, h.y + 8, 56, 14, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#6e5126';
+  ctx.beginPath();
+  ctx.ellipse(h.x, h.y + 4, 50, 12, 0, 0, Math.PI*2);
+  ctx.fill();
+  // dark hole
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.ellipse(h.x, h.y, 44, 11, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawLidudeAt(h){
+  const lid = h.lidude;
+  if (!lid) return;
+  const t = visibleT(lid);
+  const size = 96;
+  const popHeight = 36;
+  const y = h.y - popHeight * t;
+  // clip so lidude appears to come out of the hole
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(h.x - size, 0, size*2, h.y - 4);
+  ctx.clip();
+
+  // pick sprite
+  const kind = lid.kind === 'bad' ? sprites.bad
+              : lid.kind === 'gold' ? sprites.gold
+              : sprites.green;
+
+  // hit squish
+  let sy = 1;
+  if (lid.hit) sy = 0.6;
+
+  ctx.save();
+  ctx.translate(h.x, y);
+  ctx.scale(1, sy);
+  if (kind.ready){
+    ctx.drawImage(kind.img, -size/2, -size/2, size, size);
+  } else {
+    ctx.fillStyle = lid.kind === 'bad' ? '#e63946' : lid.kind === 'gold' ? '#ffd166' : '#3aac3e';
+    ctx.fillRect(-size/2, -size/2, size, size);
+  }
+  ctx.restore();
+
+  // urgency flash for bad ones (red border pulse)
+  if (lid.kind === 'bad' && t > 0.5){
+    const a = (Math.sin(lid.popFrame * 0.4) + 1) * 0.5 * 0.7;
+    ctx.strokeStyle = `rgba(255, 60, 80, ${a})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(h.x, y, size/2 + 4, 0, Math.PI*2);
+    ctx.stroke();
+  }
+  // sparkle for gold
+  if (lid.kind === 'gold' && t > 0.5){
+    const a = (Math.sin(lid.popFrame * 0.3) + 1) * 0.5;
+    ctx.fillStyle = `rgba(255,255,150,${a})`;
+    ctx.fillRect(h.x - size/2 - 6, y - size/2 - 6, 4, 4);
+    ctx.fillRect(h.x + size/2 + 2, y - size/2 - 4, 4, 4);
+    ctx.fillRect(h.x + size/2 + 4, y, 3, 3);
+  }
+  ctx.restore();
+}
+
+function drawHoleRim(h){
+  // overlap rim that sits on top of lidude bottom, gives illusion of emerging
+  ctx.save();
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.ellipse(h.x, h.y, 44, 11, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#0c0c1a';
+  ctx.beginPath();
+  ctx.ellipse(h.x, h.y, 38, 8, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSmack(s){
+  const a = s.life / 22;
+  ctx.save();
+  ctx.translate(s.x, s.y);
+  ctx.rotate((1 - a) * 0.5);
+  ctx.globalAlpha = a;
+  ctx.strokeStyle = s.color;
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 8; i++){
+    const ang = (i / 8) * Math.PI * 2;
+    const r1 = 4 + (1-a) * 6;
+    const r2 = 14 + (1-a) * 10;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ang)*r1, Math.sin(ang)*r1);
+    ctx.lineTo(Math.cos(ang)*r2, Math.sin(ang)*r2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawParticles(){
+  for (const p of particles){
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.min(1, p.life / 24);
+    ctx.fillRect(p.x-2, p.y-2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function render(){
+  clearBG();
+  // sort holes by y so back ones render first
+  const sorted = holes.slice().sort((a,b)=>a.y-b.y);
+  for (const h of sorted) drawHole(h);
+  for (const h of sorted){
+    if (h.lidude) drawLidudeAt(h);
+    drawHoleRim(h);
+  }
+  for (const s of smacks) drawSmack(s);
+  drawParticles();
+}
+
+/* ---------- HUD ---------- */
+function syncHUD(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('time').textContent = Math.ceil(timeLeft);
+  document.getElementById('misses').textContent = misses + '/3';
+  document.getElementById('bestMenu').textContent = best;
+  document.getElementById('totalMenu').textContent = totalWhacked;
+  localStorage.setItem('lidudeWhack.total', totalWhacked);
+}
+
+/* ---------- Loop ---------- */
+function loop(){
+  update();
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- Buttons ---------- */
+document.getElementById('playBtn').addEventListener('click', ()=>{ audio(); start(); });
+document.getElementById('againBtn').addEventListener('click', ()=>{ audio(); start(); });
+document.getElementById('menuBtn').addEventListener('click', ()=>{
+  document.getElementById('over').classList.add('hidden');
+  document.getElementById('menu').classList.remove('hidden');
+  state = STATE.menu;
+});
+
+/* boot HUD with menu state */
+setupHoles(); // so first render isn't empty
+syncHUD();
+</script>
+</body>
+</html>

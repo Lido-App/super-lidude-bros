@@ -69,6 +69,11 @@
       "id": "lidude-match",
       "name": "Lidude Match",
       "path": "lidude-match/index.html"
+    },
+    {
+      "id": "lidude-whack",
+      "name": "Lidude Whack",
+      "path": "lidude-whack/index.html"
     }
   ]
 }
