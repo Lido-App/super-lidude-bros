@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+<title>Lidude Drop</title>
+<style>
+  :root{
+    --ink:#1a1a2e;
+    --grass:#3aac3e;
+    --paper:#fdf6e3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;background:#0a0a18;color:#fff;}
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{display:block;background:#0a0a18;touch-action:none;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+
+  /* HUD */
+  #hud{position:fixed;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:18px;align-items:center;pointer-events:none;z-index:5;}
+  .pill{
+    background:rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    padding:8px 14px;border-radius:999px;border:1.5px solid rgba(255,255,255,.18);
+    font-weight:700;font-size:14px;letter-spacing:.5px;display:flex;align-items:center;gap:6px;
+    text-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .pill .num{font-variant-numeric:tabular-nums;font-size:18px;color:#ffd166;}
+  .pill .lbl{opacity:.8;font-size:11px;text-transform:uppercase;}
+
+  /* Combo flash */
+  #combo{position:fixed;top:74px;left:50%;transform:translate(-50%,-10px);opacity:0;pointer-events:none;z-index:5;
+    font-weight:900;font-size:32px;color:#ffd166;text-shadow:0 2px 0 #1a1a2e,0 0 20px rgba(255,209,102,.6);
+    transition:opacity .15s,transform .15s;
+  }
+  #combo.show{opacity:1;transform:translate(-50%,0);}
+
+  /* Menus */
+  .panel{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;
+    background:radial-gradient(ellipse at center,rgba(0,0,0,.55) 0%,rgba(0,0,0,.85) 80%);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  }
+  .panel.hidden{display:none;}
+  .card{
+    background:linear-gradient(180deg,#fdf6e3 0%,#f4e8c8 100%);
+    color:var(--ink);border-radius:24px;padding:32px 28px;text-align:center;
+    border:4px solid var(--ink);box-shadow:0 14px 0 var(--ink),0 30px 60px rgba(0,0,0,.5);
+    max-width:340px;width:88%;
+    animation:pop .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop{from{opacity:0;transform:scale(.85) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
+  .card h1{font-size:36px;letter-spacing:-.5px;margin-bottom:6px;line-height:1;}
+  .card .tag{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#8b5e34;margin-bottom:20px;}
+  .card p{font-size:14px;color:#5b4a2a;margin:14px 0;line-height:1.5;}
+  .stat-row{display:flex;justify-content:space-around;margin:18px 0;padding:14px 0;border-top:2px dashed #d2b890;border-bottom:2px dashed #d2b890;}
+  .stat{display:flex;flex-direction:column;gap:2px;}
+  .stat .v{font-size:26px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#8b5e34;}
+  .btn{
+    display:inline-block;background:var(--grass);color:white;
+    padding:14px 32px;border-radius:14px;font-weight:900;font-size:18px;
+    border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);
+    cursor:pointer;letter-spacing:.5px;text-transform:uppercase;
+    transition:transform .08s,box-shadow .08s;user-select:none;
+  }
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink);}
+  .btn.alt{background:#fdba74;}
+  .btn.row{margin:0 4px;}
+  .hint{margin-top:14px;font-size:12px;color:#8b5e34;letter-spacing:.5px;}
+  .keys{display:inline-block;background:#1a1a2e;color:#fdf6e3;padding:2px 8px;border-radius:6px;font-family:monospace;font-size:11px;margin:0 2px;}
+
+  #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,12px);opacity:0;pointer-events:none;z-index:6;
+    background:rgba(0,0,0,.7);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;
+    transition:opacity .2s,transform .2s;}
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+</style>
+<script src="../_shared/lido-rewards.js"></script>
+</head>
+<body>
+<div id="stage"><canvas id="game"></canvas></div>
+
+<div id="hud">
+  <div class="pill"><span class="lbl">Score</span><span class="num" id="score">0</span></div>
+  <div class="pill"><span class="lbl">Best</span><span class="num" id="best">0</span></div>
+  <div class="pill"><span class="lbl">Combo</span><span class="num" id="comboNum">0</span></div>
+</div>
+<div id="combo">PERFECT!</div>
+
+<div id="menu" class="panel">
+  <div class="card">
+    <h1>Lidude Drop</h1>
+    <div class="tag">spin · fall · survive</div>
+    <p>Hold to rotate the tower. Find the gaps. Don't hit a <span style="color:#e63946;font-weight:900">red</span> ring or it's over.</p>
+    <p style="font-size:12px;opacity:.8;">Each ring smashed = +1. Smash 3+ in a row without a bounce for a combo bonus.</p>
+    <div class="stat-row">
+      <div class="stat"><span class="v" id="bestMenu">0</span><span class="l">best</span></div>
+      <div class="stat"><span class="v" id="totalMenu">0</span><span class="l">total smashed</span></div>
+    </div>
+    <div class="btn" id="playBtn">Drop In</div>
+    <div class="hint">
+      <span class="keys">← →</span> or <span class="keys">A D</span> · <span class="keys">drag</span> on touch
+    </div>
+  </div>
+</div>
+
+<div id="over" class="panel hidden">
+  <div class="card">
+    <h1 id="overTitle">Splat.</h1>
+    <div class="tag" id="overTag">that was a red one</div>
+    <div class="stat-row">
+      <div class="stat"><span class="v" id="finalScore">0</span><span class="l">score</span></div>
+      <div class="stat"><span class="v" id="finalBest">0</span><span class="l">best</span></div>
+    </div>
+    <div class="btn row" id="againBtn">Try Again</div>
+    <div class="btn alt row" id="menuBtn">Menu</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------- Lidude sprite (inline + file fallback) ---------- */
+const LIDUDE_SVG = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><defs><linearGradient id='r' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='%23ff006e'/><stop offset='33%' stop-color='%23ffbe0b'/><stop offset='66%' stop-color='%233a86ff'/><stop offset='100%' stop-color='%238338ec'/></linearGradient></defs><line x1='92' y1='178' x2='78' y2='220' stroke='%23a8b5e0' stroke-width='9' stroke-linecap='round'/><line x1='148' y1='178' x2='162' y2='220' stroke='%23a8b5e0' stroke-width='9' stroke-linecap='round'/><ellipse cx='74' cy='223' rx='17' ry='7' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><ellipse cx='166' cy='223' rx='17' ry='7' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><path d='M 48 110 Q 22 130 30 168 Q 35 184 50 182' fill='none' stroke='%231a1a2e' stroke-width='4.5' stroke-linecap='round'/><ellipse cx='44' cy='184' rx='13' ry='11' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><path d='M 192 95 Q 212 75 205 48' fill='none' stroke='%231a1a2e' stroke-width='4.5' stroke-linecap='round'/><ellipse cx='202' cy='42' rx='11' ry='13' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><rect x='40' y='60' width='160' height='120' rx='8' fill='%233aac3e' stroke='%231a1a2e' stroke-width='4.5'/><rect x='44' y='64' width='42' height='42' fill='%231a1a2e'/><rect x='158' y='148' width='28' height='28' fill='url(%23r)' stroke='%231a1a2e' stroke-width='2.5'/><line x1='50' y1='78' x2='68' y2='78' stroke='%231a1a2e' stroke-width='3' stroke-linecap='round'/><line x1='48' y1='90' x2='62' y2='90' stroke='%231a1a2e' stroke-width='3' stroke-linecap='round'/><circle cx='103' cy='118' r='24' fill='white' stroke='%231a1a2e' stroke-width='4'/><circle cx='148' cy='118' r='24' fill='white' stroke='%231a1a2e' stroke-width='4'/><circle cx='108' cy='121' r='11' fill='%235a8fd6'/><circle cx='153' cy='121' r='11' fill='%235a8fd6'/><circle cx='109' cy='122' r='5' fill='%231a1a2e'/><circle cx='154' cy='122' r='5' fill='%231a1a2e'/><circle cx='106' cy='118' r='2.8' fill='white'/><circle cx='151' cy='118' r='2.8' fill='white'/><ellipse cx='125' cy='158' rx='6' ry='8' fill='%231a1a2e'/><ellipse cx='125' cy='159' rx='3' ry='4' fill='%23fdba74'/></svg>`;
+const lidudeImg = new Image();
+let lidudeReady = false;
+lidudeImg.onload = ()=>{ lidudeReady = true; };
+lidudeImg.onerror = ()=>{ lidudeImg.src = LIDUDE_SVG; };
+lidudeImg.src = "lidude.svg";
+
+/* ---------- Canvas / DPI ---------- */
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+let W=0, H=0, DPR=1;
+function fit(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const aspect = 9/16;
+  const maxW = Math.min(window.innerWidth - 16, 460);
+  const maxH = window.innerHeight - 16;
+  let cw = maxW, ch = maxW / aspect;
+  if (ch > maxH){ ch = maxH; cw = ch * aspect; }
+  W = Math.floor(cw); H = Math.floor(ch);
+  cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
+  cvs.width = Math.floor(W * DPR); cvs.height = Math.floor(H * DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+fit(); window.addEventListener('resize', fit);
+
+/* ---------- Audio ---------- */
+let actx;
+function audio(){ if(!actx) try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} return actx; }
+function tone(freq, dur=0.08, type='square', vol=0.13){
+  const a = audio(); if(!a) return;
+  const o = a.createOscillator(); const g = a.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.value = vol;
+  o.connect(g); g.connect(a.destination);
+  const t = a.currentTime;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.start(t); o.stop(t + dur);
+}
+function sfxSmash(combo){ tone(220 + Math.min(combo,10)*40, 0.07, 'square', 0.14); }
+function sfxBounce(){ tone(180, 0.05, 'sine', 0.1); }
+function sfxFail(){ tone(180,0.18,'sawtooth',0.18); setTimeout(()=>tone(110,0.25,'sawtooth',0.16),80); }
+function sfxCombo(){ tone(660,0.06,'triangle',0.13); setTimeout(()=>tone(880,0.08,'triangle',0.14),50); }
+
+/* ---------- Game state ---------- */
+const STATE = { menu:0, play:1, over:2 };
+let state = STATE.menu;
+
+/* tower geometry */
+const RING_RADIUS = 110;          // outer radius of ring slab
+const RING_THICKNESS = 22;        // visual thickness of ring slabs
+const RING_SPACING = 110;         // vertical spacing between ring layers
+const HOLE_HALF = Math.PI/4;      // half-angle of the gap (in radians) — ~45deg gap
+const TOWER_X = () => W*0.5;
+const TOWER_TOP = () => H*0.32;   // y where Lidude bobs
+
+/* Lidude (camera-locked at top) */
+const player = {
+  size: 56,
+  x: 0, y: 0,
+  vy: 0,
+  bouncing: false,
+  bounceFrames: 0,
+};
+
+/* World rolls upward as Lidude "falls" through */
+let scrollY = 0;        // how far the tower has scrolled up
+let rotation = 0;       // tower rotation (radians)
+let targetRot = 0;      // desired rotation from input
+let rotVel = 0;
+
+/* Rings: each ring is a layer at a fixed worldY, with N slabs (segments).
+   Each slab has [startAngle, endAngle, color('safe' or 'red')] */
+let rings = [];
+let nextRingY = 0;      // next worldY to spawn at (counts upward, will be subtracted from scrollY for screen pos)
+let level = 0;
+
+/* Score */
+let score = 0;
+let best = +(localStorage.getItem('lidudeDrop.best') || 0);
+let totalSmashed = +(localStorage.getItem('lidudeDrop.total') || 0);
+let combo = 0;
+
+/* Particles */
+let particles = [];
+
+/* Falling chunks (smashed slab debris) */
+let chunks = [];
+
+/* Input */
+let dragX = null;
+const keys = {};
+window.addEventListener('keydown', e=>{
+  if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') keys.L = true;
+  if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') keys.R = true;
+  if (e.key===' '||e.key==='Enter'){ if(state===STATE.menu) start(); else if(state===STATE.over) start(); }
+});
+window.addEventListener('keyup', e=>{
+  if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') keys.L = false;
+  if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') keys.R = false;
+});
+cvs.addEventListener('pointerdown', e=>{
+  audio();
+  dragX = e.clientX;
+  cvs.setPointerCapture(e.pointerId);
+});
+cvs.addEventListener('pointermove', e=>{
+  if (dragX === null) return;
+  const dx = e.clientX - dragX;
+  targetRot += dx * 0.012;
+  dragX = e.clientX;
+});
+cvs.addEventListener('pointerup', ()=>{ dragX = null; });
+cvs.addEventListener('pointercancel', ()=>{ dragX = null; });
+
+/* ---------- Ring generation ---------- */
+function makeRing(worldY, lvl){
+  // build 6-8 slabs around the circle, with one or two gaps
+  // gap count tightens with level
+  const slabs = [];
+  // pick center angle of safe gap
+  const gapCount = (lvl < 4) ? 2 : 1;
+  const gapAngles = [];
+  for (let i = 0; i < gapCount; i++){
+    gapAngles.push(Math.random() * Math.PI*2);
+  }
+  // build a list of "covered" arcs by stepping around circle
+  const STEPS = 64;
+  const covered = new Array(STEPS).fill(true);
+  for (const ga of gapAngles){
+    for (let i = 0; i < STEPS; i++){
+      const a = (i/STEPS) * Math.PI*2;
+      let d = Math.abs(((a - ga + Math.PI*3) % (Math.PI*2)) - Math.PI);
+      if (d < HOLE_HALF) covered[i] = false;
+    }
+  }
+  // walk around and segment into runs
+  // also place red zones on some covered runs (1-3 reds depending on level)
+  const runs = []; // {start,end}
+  let runStart = -1;
+  for (let i = 0; i < STEPS; i++){
+    if (covered[i] && runStart === -1) runStart = i;
+    if ((!covered[i] || i === STEPS-1) && runStart !== -1){
+      const end = covered[i] ? i+1 : i;
+      runs.push({ s:runStart, e:end });
+      runStart = -1;
+    }
+  }
+  // wrap-around merge if first and last covered
+  if (runs.length >= 2 && covered[0] && covered[STEPS-1]){
+    const first = runs.shift();
+    const last = runs[runs.length-1];
+    last.e = STEPS + first.e;
+  }
+  // turn runs into slabs in radians, optionally split a run with a red strip
+  const redCount = Math.min(3, Math.floor(lvl / 3));
+  let placedReds = 0;
+  for (const r of runs){
+    const a0 = (r.s/STEPS)*Math.PI*2;
+    const a1 = (r.e/STEPS)*Math.PI*2;
+    const span = a1 - a0;
+    // maybe split this run into [safe][red][safe]
+    if (placedReds < redCount && span > 0.6 && Math.random() < 0.55){
+      const redWidth = 0.22 + Math.random()*0.18;
+      const tCenter = 0.3 + Math.random()*0.4;
+      const rA = a0 + span * tCenter - redWidth/2;
+      const rB = rA + redWidth;
+      slabs.push({ a0, a1: rA, red: false });
+      slabs.push({ a0: rA, a1: rB, red: true });
+      slabs.push({ a0: rB, a1, red: false });
+      placedReds++;
+    } else {
+      slabs.push({ a0, a1, red: false });
+    }
+  }
+  // tint colors based on level for the safe slabs (HSL hue progression)
+  const hue = (190 + lvl * 18) % 360;
+  return {
+    worldY,
+    slabs,
+    hue,
+    smashed: false,
+    smashFrames: 0,
+  };
+}
+
+function seedTower(){
+  rings = [];
+  nextRingY = 0;
+  level = 0;
+  // first 3 rings are gentle (more gap, no reds)
+  for (let i = 0; i < 24; i++){
+    const worldY = nextRingY;
+    const lvl = i;
+    const ring = makeRing(worldY, Math.max(0, i - 3));
+    rings.push(ring);
+    nextRingY += RING_SPACING;
+  }
+}
+
+/* ---------- Game flow ---------- */
+function start(){
+  state = STATE.play;
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  score = 0; combo = 0;
+  scrollY = 0; rotation = 0; targetRot = 0; rotVel = 0;
+  player.vy = 0; player.bouncing = false; player.bounceFrames = 0;
+  particles = []; chunks = [];
+  seedTower();
+  syncHUD();
+}
+function gameOver(reason){
+  state = STATE.over;
+  sfxFail();
+  // explode lidude into particles
+  for (let i=0;i<28;i++){
+    particles.push({
+      x: TOWER_X(), y: TOWER_TOP(),
+      vx: (Math.random()-0.5)*8, vy: -2 - Math.random()*5,
+      life: 60, color: ['#3aac3e','#ff006e','#ffbe0b','#3a86ff'][i%4],
+    });
+  }
+  if (score > best){ best = score; localStorage.setItem('lidudeDrop.best', best); }
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalBest').textContent = best;
+  document.getElementById('overTitle').textContent = reason==='red' ? 'Splat.' : 'Splat.';
+  document.getElementById('overTag').textContent = reason==='red' ? 'that was a red one' : 'oof';
+  document.getElementById('over').classList.remove('hidden');
+  syncHUD();
+}
+
+/* ---------- Update ---------- */
+function update(dt){
+  if (state !== STATE.play) return;
+
+  // input → rotation
+  const inputSpeed = 0.09;
+  if (keys.L) targetRot -= inputSpeed;
+  if (keys.R) targetRot += inputSpeed;
+  // smooth rotation toward target
+  rotVel += (targetRot - rotation) * 0.18;
+  rotVel *= 0.6;
+  rotation += rotVel;
+
+  // Lidude falls — converted into scrollY increase (world rolls up)
+  player.vy += 0.35;                    // gravity
+  player.vy = Math.min(player.vy, 12);  // cap
+  scrollY += player.vy;
+
+  // collision: find any ring whose worldY maps to roughly TOWER_TOP() in screen space
+  // screen y of a ring = TOWER_TOP() + (ring.worldY - scrollY)
+  // collision band: when ring.worldY - scrollY is between [-RING_THICKNESS, 6]
+  // (player is at TOWER_TOP())
+  for (const r of rings){
+    if (r.smashed) continue;
+    const dy = r.worldY - scrollY; // 0 means ring is right at lidude's feet
+    if (dy < -8 || dy > RING_THICKNESS+4) continue;
+
+    // angular check: which slab is at angle (-rotation) from world
+    // rotation rotates the tower; lidude is at angle 0 from screen
+    // the slab covers (a0+rotation, a1+rotation) — see if 0 is inside (mod 2π)
+    let hitSlab = null;
+    for (const slab of r.slabs){
+      if (angleInside(0, slab.a0 + rotation, slab.a1 + rotation)){
+        hitSlab = slab; break;
+      }
+    }
+    if (!hitSlab){
+      // landed in a gap — keep falling, count nothing
+      // BUT: only count "passed" once we cross the lower edge fully
+      continue;
+    }
+    if (hitSlab.red){
+      gameOver('red');
+      return;
+    }
+    // safe slab → bounce + smash this ring
+    bounce(r);
+    return;
+  }
+
+  // ring scoring: every ring whose worldY < scrollY-RING_THICKNESS counts as "passed"
+  // we only mark passed when in gap (no smash) — since smash already counts
+  for (const r of rings){
+    if (r.smashed || r.passed) continue;
+    if (r.worldY - scrollY < -8){
+      r.passed = true;
+      // gap pass = combo continues, +1 score
+      score += 1; totalSmashed += 1;
+      syncHUD();
+    }
+  }
+
+  // recycle/extend tower
+  // remove rings far above the screen view (worldY << scrollY)
+  while (rings.length && rings[0].worldY < scrollY - RING_SPACING * 2){
+    rings.shift();
+  }
+  // append more rings as we descend
+  while (rings.length < 24){
+    level++;
+    const lvl = Math.max(0, level + 0);
+    const ring = makeRing(nextRingY, lvl);
+    rings.push(ring);
+    nextRingY += RING_SPACING;
+  }
+
+  // particles
+  for (let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+    p.vy += 0.35;
+    p.x += p.vx; p.y += p.vy;
+    p.life--;
+    if (p.life <= 0) particles.splice(i,1);
+  }
+
+  // chunks
+  for (let i = chunks.length - 1; i >= 0; i--){
+    const c = chunks[i];
+    c.vy += 0.4; c.y += c.vy; c.x += c.vx;
+    c.rot += c.spin;
+    c.life--;
+    if (c.life <= 0 || c.y > H + 100) chunks.splice(i,1);
+  }
+
+  // ring smash flash
+  for (const r of rings){
+    if (r.smashed && r.smashFrames > 0) r.smashFrames--;
+  }
+
+  // bounce frames
+  if (player.bounceFrames > 0) player.bounceFrames--;
+}
+
+function bounce(r){
+  // smash the ring, send chunks flying, score combo
+  r.smashed = true;
+  r.smashFrames = 14;
+  player.vy = -7;             // bounce up
+  player.bouncing = true;
+  player.bounceFrames = 8;
+  combo += 1;
+  const bonus = combo >= 3 ? 2 : 1;
+  score += bonus;
+  totalSmashed += 1;
+  if (combo >= 3) flashCombo();
+  if (combo % 3 === 0 && combo > 0) sfxCombo();
+  sfxSmash(combo);
+  // spawn chunks for smashed safe slabs
+  for (const slab of r.slabs){
+    if (slab.red) continue;
+    const a = (slab.a0 + slab.a1) / 2 + rotation;
+    const ringScreenY = TOWER_TOP() + (r.worldY - scrollY);
+    const cx = TOWER_X() + Math.cos(a) * RING_RADIUS;
+    const cy = ringScreenY + RING_THICKNESS/2;
+    chunks.push({
+      x: cx, y: cy,
+      vx: Math.cos(a) * 4 + (Math.random()-0.5)*2,
+      vy: -2 + Math.random()*-2,
+      rot: 0, spin: (Math.random()-0.5)*0.3,
+      hue: r.hue, span: slab.a1 - slab.a0,
+      life: 50,
+    });
+  }
+  // particles burst at lidude
+  for (let i=0;i<8;i++){
+    particles.push({
+      x: TOWER_X(), y: TOWER_TOP() + 10,
+      vx: (Math.random()-0.5)*6, vy: -3 + Math.random()*-2,
+      life: 24, color: `hsl(${r.hue},70%,60%)`,
+    });
+  }
+  syncHUD();
+}
+
+function flashCombo(){
+  const el = document.getElementById('combo');
+  el.textContent = combo + '× COMBO!';
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 600);
+}
+
+/* utility */
+function angleInside(a, a0, a1){
+  // normalize
+  const norm = x => ((x % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+  const an = norm(a), s = norm(a0), e = norm(a1);
+  if (s <= e) return an >= s && an <= e;
+  return an >= s || an <= e;
+}
+
+/* ---------- Render ---------- */
+function clear(){
+  // altitude-tinted background gradient
+  const t = Math.min(1, scrollY / 4000);
+  const topHue = 220 - t*30;
+  const botHue = 270 - t*30;
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, `hsl(${topHue}, 60%, 14%)`);
+  g.addColorStop(1, `hsl(${botHue}, 70%, 8%)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+
+  // depth stars
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  for (let i = 0; i < 40; i++){
+    const sy = ((i * 137 + scrollY * 0.15) % H + H) % H;
+    const sx = ((i * 53) % W);
+    const sz = 0.6 + (i % 3) * 0.5;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(sx, sy, sz, sz);
+  }
+  ctx.restore();
+}
+
+function drawCenterPole(){
+  // a faint vertical pole down the middle of the tower (gives spatial anchor)
+  const x = TOWER_X();
+  const grd = ctx.createLinearGradient(x-12, 0, x+12, 0);
+  grd.addColorStop(0, 'rgba(255,255,255,0.04)');
+  grd.addColorStop(0.5, 'rgba(255,255,255,0.10)');
+  grd.addColorStop(1, 'rgba(255,255,255,0.04)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x - 12, TOWER_TOP() + 30, 24, H);
+  // shadow under top
+  const g2 = ctx.createRadialGradient(x, TOWER_TOP() + 26, 4, x, TOWER_TOP() + 26, 80);
+  g2.addColorStop(0, 'rgba(0,0,0,0.45)');
+  g2.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g2;
+  ctx.fillRect(x - 90, TOWER_TOP() + 10, 180, 100);
+}
+
+function drawRing(r){
+  const screenY = TOWER_TOP() + (r.worldY - scrollY);
+  // cull
+  if (screenY < TOWER_TOP() - 20) return;
+  if (screenY > H + 40) return;
+
+  const cx = TOWER_X();
+  const cy = screenY + RING_THICKNESS/2;
+
+  // smashed: faint pulse ring then nothing
+  if (r.smashed){
+    if (r.smashFrames > 0){
+      const a = r.smashFrames / 14;
+      ctx.save();
+      ctx.globalAlpha = a * 0.5;
+      ctx.strokeStyle = `hsl(${r.hue},80%,70%)`;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, RING_RADIUS + (1-a)*30, (RING_RADIUS + (1-a)*30) * 0.32, 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    return;
+  }
+
+  // draw each slab as an arc (top + side + base for "thickness")
+  for (const slab of r.slabs){
+    const a0 = slab.a0 + rotation;
+    const a1 = slab.a1 + rotation;
+    const baseColor = slab.red ? '#e63946' : `hsl(${r.hue}, 65%, 55%)`;
+    const sideColor = slab.red ? '#9b1c2a' : `hsl(${r.hue}, 60%, 35%)`;
+
+    // SIDE (front face of ring slab) — drawn as a filled wedge from outer arc to outer arc + thickness
+    ctx.fillStyle = sideColor;
+    ctx.beginPath();
+    arcXY(cx, cy, RING_RADIUS, a0, a1, 0.32);
+    arcXY(cx, cy + RING_THICKNESS, RING_RADIUS, a1, a0, 0.32, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // TOP face
+    ctx.fillStyle = baseColor;
+    ctx.beginPath();
+    arcXY(cx, cy, RING_RADIUS, a0, a1, 0.32);
+    arcXY(cx, cy, RING_RADIUS - 12, a1, a0, 0.32, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // outline
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // red slab gets warning stripes
+    if (slab.red){
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      const steps = 4;
+      for (let i = 1; i < steps; i++){
+        const t = i/steps;
+        const aa = a0 + (a1-a0)*t;
+        const x1 = cx + Math.cos(aa)*(RING_RADIUS - 11);
+        const y1 = cy + Math.sin(aa)*(RING_RADIUS - 11) * 0.32;
+        const x2 = cx + Math.cos(aa)*RING_RADIUS;
+        const y2 = cy + Math.sin(aa)*RING_RADIUS * 0.32;
+        ctx.beginPath();
+        ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+}
+
+// helper to add an elliptical arc to current path (squashed for fake 3D)
+function arcXY(cx, cy, r, a0, a1, squash, reverse=false){
+  const STEPS = 24;
+  const start = reverse ? a1 : a0;
+  const end = reverse ? a0 : a1;
+  for (let i = 0; i <= STEPS; i++){
+    const t = reverse ? (1 - i/STEPS) : (i/STEPS);
+    const a = a0 + (a1 - a0) * t;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r * squash;
+    if (i === 0 && !reverse) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  }
+}
+
+function drawChunks(){
+  for (const c of chunks){
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(c.rot);
+    ctx.globalAlpha = Math.min(1, c.life / 30);
+    ctx.fillStyle = `hsl(${c.hue}, 65%, 55%)`;
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 1.5;
+    const w = 22, h = 8;
+    ctx.beginPath();
+    ctx.rect(-w/2, -h/2, w, h);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawParticles(){
+  for (const p of particles){
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.min(1, p.life / 30);
+    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawLidude(){
+  const x = TOWER_X();
+  const y = TOWER_TOP();
+
+  // shadow disc on top of next ring
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 30, 22, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // squash on bounce
+  const squashY = player.bounceFrames > 0 ? 1 - player.bounceFrames * 0.02 : 1;
+  const squashX = player.bounceFrames > 0 ? 1 + player.bounceFrames * 0.015 : 1;
+
+  // spin slightly while falling
+  const spin = (player.vy / 12) * 0.12;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(spin);
+  ctx.scale(squashX, squashY);
+  if (lidudeReady){
+    ctx.drawImage(lidudeImg, -player.size/2, -player.size/2, player.size, player.size);
+  } else {
+    ctx.fillStyle = '#3aac3e';
+    ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+  }
+  ctx.restore();
+}
+
+/* ---------- Render frame ---------- */
+function render(){
+  clear();
+  drawCenterPole();
+  // sort rings back-to-front (lower screenY first = farther from us, but with squash it doesn't matter much)
+  // Just iterate; rings at top get drawn first so lower ones overlap visually
+  // Actually we want closer rings (larger screenY) on top → draw farther first
+  const sorted = rings.slice().sort((a,b)=> (a.worldY - b.worldY));
+  for (const r of sorted) drawRing(r);
+
+  drawChunks();
+  drawLidude();
+  drawParticles();
+
+  // depth fog at top (so rings fade in nicely)
+  const fog = ctx.createLinearGradient(0, TOWER_TOP() - 60, 0, TOWER_TOP() + 30);
+  fog.addColorStop(0, 'rgba(10,10,24,1)');
+  fog.addColorStop(1, 'rgba(10,10,24,0)');
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, TOWER_TOP() - 60, W, 90);
+}
+
+/* ---------- HUD ---------- */
+function syncHUD(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('best').textContent = Math.max(best, score);
+  document.getElementById('comboNum').textContent = combo;
+  document.getElementById('bestMenu').textContent = best;
+  document.getElementById('totalMenu').textContent = totalSmashed;
+  localStorage.setItem('lidudeDrop.total', totalSmashed);
+}
+
+/* ---------- Loop ---------- */
+let last = 0;
+function loop(t){
+  const dt = Math.min(40, t - last);
+  last = t;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- Buttons ---------- */
+document.getElementById('playBtn').addEventListener('click', ()=>{ audio(); start(); });
+document.getElementById('againBtn').addEventListener('click', ()=>{ audio(); start(); });
+document.getElementById('menuBtn').addEventListener('click', ()=>{
+  document.getElementById('over').classList.add('hidden');
+  document.getElementById('menu').classList.remove('hidden');
+  state = STATE.menu;
+});
+
+/* boot HUD */
+syncHUD();
+</script>
+</body>
+</html>
