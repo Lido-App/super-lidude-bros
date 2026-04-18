@@ -59,6 +59,11 @@
       "id": "lidude-invaders",
       "name": "Lidude Invaders",
       "path": "lidude-invaders/index.html"
+    },
+    {
+      "id": "lidude-pong",
+      "name": "Lidude Pong",
+      "path": "lidude-pong/index.html"
     }
   ]
 }
