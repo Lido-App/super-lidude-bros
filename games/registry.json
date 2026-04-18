@@ -54,6 +54,11 @@
       "id": "lidude-drop",
       "name": "Lidude Drop",
       "path": "lidude-drop/index.html"
+    },
+    {
+      "id": "lidude-invaders",
+      "name": "Lidude Invaders",
+      "path": "lidude-invaders/index.html"
     }
   ]
 }
