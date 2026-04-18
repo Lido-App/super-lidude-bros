@@ -64,6 +64,11 @@
       "id": "lidude-pong",
       "name": "Lidude Pong",
       "path": "lidude-pong/index.html"
+    },
+    {
+      "id": "lidude-match",
+      "name": "Lidude Match",
+      "path": "lidude-match/index.html"
     }
   ]
 }
