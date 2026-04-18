@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+<title>Lidude Slice</title>
+<style>
+  :root{ --ink:#1a1a2e; --grass:#3aac3e; --paper:#fdf6e3; --berry:#ff006e; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#0a0a18;color:#fff;}
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{display:block;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.6);touch-action:none;
+    background:linear-gradient(180deg,#3a1d3d 0%,#1d0e2e 100%);}
+
+  #hud{position:fixed;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:14px;align-items:center;pointer-events:none;z-index:5;}
+  .pill{
+    background:rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    padding:8px 14px;border-radius:999px;border:1.5px solid rgba(255,255,255,.18);
+    font-weight:700;font-size:13px;letter-spacing:.5px;display:flex;align-items:center;gap:6px;
+  }
+  .pill .num{font-variant-numeric:tabular-nums;font-size:18px;color:#ffd166;}
+  .pill .lbl{opacity:.8;font-size:10px;text-transform:uppercase;}
+  .lives{display:flex;gap:3px;}
+  .heart{width:14px;height:14px;background:#ff006e;clip-path:polygon(50% 92%,5% 50%,5% 25%,30% 0,50% 22%,70% 0,95% 25%,95% 50%);}
+  .heart.gone{background:#444;}
+
+  #combo{position:fixed;top:84px;left:50%;transform:translate(-50%,-10px);opacity:0;pointer-events:none;z-index:5;
+    font-weight:900;font-size:28px;color:#ffd166;text-shadow:0 2px 0 #1a1a2e,0 0 20px rgba(255,209,102,.6);
+    transition:opacity .18s,transform .18s;}
+  #combo.show{opacity:1;transform:translate(-50%,0);}
+
+  .panel{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;
+    background:radial-gradient(ellipse at center,rgba(0,0,0,.55) 0%,rgba(0,0,0,.85) 80%);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+  .panel.hidden{display:none;}
+  .card{
+    background:linear-gradient(180deg,#fdf6e3 0%,#f4e8c8 100%);
+    color:var(--ink);border-radius:24px;padding:30px 26px;text-align:center;
+    border:4px solid var(--ink);box-shadow:0 14px 0 var(--ink),0 30px 60px rgba(0,0,0,.5);
+    max-width:340px;width:88%;
+    animation:pop .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop{from{opacity:0;transform:scale(.85) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
+  .card h1{font-size:34px;letter-spacing:-.5px;margin-bottom:6px;line-height:1;}
+  .card .tag{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#8b5e34;margin-bottom:18px;}
+  .card p{font-size:14px;color:#5b4a2a;margin:12px 0;line-height:1.5;}
+  .stat-row{display:flex;justify-content:space-around;margin:18px 0;padding:14px 0;border-top:2px dashed #d2b890;border-bottom:2px dashed #d2b890;}
+  .stat{display:flex;flex-direction:column;gap:2px;}
+  .stat .v{font-size:24px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#8b5e34;}
+  .btn{display:inline-block;background:var(--grass);color:white;padding:14px 30px;border-radius:14px;
+    font-weight:900;font-size:17px;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);
+    cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:transform .08s,box-shadow .08s;user-select:none;}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink);}
+  .btn.alt{background:#fdba74;}
+  .btn.row{margin:0 4px;}
+  .hint{margin-top:12px;font-size:12px;color:#8b5e34;}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="game"></canvas></div>
+
+<div id="hud">
+  <div class="pill"><span class="lbl">Score</span><span class="num" id="score">0</span></div>
+  <div class="pill"><span class="lbl">Best</span><span class="num" id="best">0</span></div>
+  <div class="pill"><div class="lives" id="lives"></div></div>
+</div>
+<div id="combo">PERFECT!</div>
+
+<div id="menu" class="panel">
+  <div class="card">
+    <h1>Lidude Slice</h1>
+    <div class="tag">swipe · slash · combo</div>
+    <p>Lidudes get tossed in the air. <b>Swipe through them</b> to slice.</p>
+    <p style="font-size:13px;">Slice multiple in one swipe for combo bonuses. Miss 3 and it's over. <span style="color:#e63946;font-weight:900">Don't slice the bombs.</span></p>
+    <div class="stat-row">
+      <div class="stat"><span class="v" id="bestMenu">0</span><span class="l">best</span></div>
+      <div class="stat"><span class="v" id="totalMenu">0</span><span class="l">sliced</span></div>
+    </div>
+    <div class="btn" id="playBtn">Start Slicing</div>
+    <div class="hint">drag to slice</div>
+  </div>
+</div>
+
+<div id="over" class="panel hidden">
+  <div class="card">
+    <h1 id="overTitle">Out of Lives</h1>
+    <div class="tag" id="overTag">they got away</div>
+    <div class="stat-row">
+      <div class="stat"><span class="v" id="finalScore">0</span><span class="l">score</span></div>
+      <div class="stat"><span class="v" id="finalBest">0</span><span class="l">best</span></div>
+    </div>
+    <div class="btn row" id="againBtn">Slice Again</div>
+    <div class="btn alt row" id="menuBtn">Menu</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- Lidude SVG (inline) ---------- */
+const LIDUDE_SVG = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><defs><linearGradient id='r' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='%23ff006e'/><stop offset='33%' stop-color='%23ffbe0b'/><stop offset='66%' stop-color='%233a86ff'/><stop offset='100%' stop-color='%238338ec'/></linearGradient></defs><line x1='92' y1='178' x2='78' y2='220' stroke='%23a8b5e0' stroke-width='9' stroke-linecap='round'/><line x1='148' y1='178' x2='162' y2='220' stroke='%23a8b5e0' stroke-width='9' stroke-linecap='round'/><ellipse cx='74' cy='223' rx='17' ry='7' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><ellipse cx='166' cy='223' rx='17' ry='7' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><path d='M 48 110 Q 22 130 30 168 Q 35 184 50 182' fill='none' stroke='%231a1a2e' stroke-width='4.5' stroke-linecap='round'/><ellipse cx='44' cy='184' rx='13' ry='11' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><path d='M 192 95 Q 212 75 205 48' fill='none' stroke='%231a1a2e' stroke-width='4.5' stroke-linecap='round'/><ellipse cx='202' cy='42' rx='11' ry='13' fill='white' stroke='%231a1a2e' stroke-width='3.5'/><rect x='40' y='60' width='160' height='120' rx='8' fill='%233aac3e' stroke='%231a1a2e' stroke-width='4.5'/><rect x='44' y='64' width='42' height='42' fill='%231a1a2e'/><rect x='158' y='148' width='28' height='28' fill='url(%23r)' stroke='%231a1a2e' stroke-width='2.5'/><line x1='50' y1='78' x2='68' y2='78' stroke='%231a1a2e' stroke-width='3' stroke-linecap='round'/><line x1='48' y1='90' x2='62' y2='90' stroke='%231a1a2e' stroke-width='3' stroke-linecap='round'/><circle cx='103' cy='118' r='24' fill='white' stroke='%231a1a2e' stroke-width='4'/><circle cx='148' cy='118' r='24' fill='white' stroke='%231a1a2e' stroke-width='4'/><circle cx='108' cy='121' r='11' fill='%235a8fd6'/><circle cx='153' cy='121' r='11' fill='%235a8fd6'/><circle cx='109' cy='122' r='5' fill='%231a1a2e'/><circle cx='154' cy='122' r='5' fill='%231a1a2e'/><circle cx='106' cy='118' r='2.8' fill='white'/><circle cx='151' cy='118' r='2.8' fill='white'/><ellipse cx='125' cy='158' rx='6' ry='8' fill='%231a1a2e'/><ellipse cx='125' cy='159' rx='3' ry='4' fill='%23fdba74'/></svg>`;
+const lidudeImg = new Image();
+let lidudeReady = false;
+lidudeImg.onload = ()=>{ lidudeReady = true; };
+lidudeImg.onerror = ()=>{ lidudeImg.src = LIDUDE_SVG; };
+lidudeImg.src = "lidude.svg";
+
+/* ---------- Canvas ---------- */
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+let W=0, H=0, DPR=1;
+function fit(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  const aspect = 9/16;
+  const maxW = Math.min(window.innerWidth - 16, 460);
+  const maxH = window.innerHeight - 16;
+  let cw = maxW, ch = maxW/aspect;
+  if (ch > maxH){ ch = maxH; cw = ch * aspect; }
+  W = Math.floor(cw); H = Math.floor(ch);
+  cvs.style.width = W+'px'; cvs.style.height = H+'px';
+  cvs.width = Math.floor(W*DPR); cvs.height = Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+fit(); window.addEventListener('resize', fit);
+
+/* ---------- Audio ---------- */
+let actx;
+function audio(){ if(!actx) try{actx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){} return actx; }
+function tone(f,d=0.07,t='square',v=0.13){
+  const a=audio(); if(!a) return;
+  const o=a.createOscillator(); const g=a.createGain();
+  o.type=t; o.frequency.value=f; g.gain.value=v;
+  o.connect(g); g.connect(a.destination);
+  const ti=a.currentTime; g.gain.setValueAtTime(v,ti);
+  g.gain.exponentialRampToValueAtTime(0.001, ti+d);
+  o.start(ti); o.stop(ti+d);
+}
+function sfxSlice(combo){ tone(440 + Math.min(combo,8)*70, 0.06, 'triangle', 0.14); }
+function sfxBomb(){ tone(140,0.18,'sawtooth',0.22); setTimeout(()=>tone(80,0.3,'sawtooth',0.18),60); }
+function sfxMiss(){ tone(220,0.12,'square',0.1); }
+function sfxCombo(){ tone(880,0.06,'triangle',0.13); setTimeout(()=>tone(1100,0.08,'triangle',0.14),50); }
+
+/* ---------- State ---------- */
+const STATE = { menu:0, play:1, over:2 };
+let state = STATE.menu;
+
+let things = []; // tossed items: {kind, x,y, vx,vy, rot,spin, size, sliced, color}
+let halves = []; // sliced halves debris
+let particles = [];
+let trail = [];   // trail of swipe points
+
+let score = 0;
+let lives = 3;
+let combo = 0;
+let comboTimer = 0;
+let totalSliced = +(localStorage.getItem('lidudeSlice.total')||0);
+let best = +(localStorage.getItem('lidudeSlice.best')||0);
+
+let spawnTimer = 0;
+let spawnEvery = 65; // frames
+let elapsed = 0;
+
+/* ---------- Input (swipe) ---------- */
+let drawing = false;
+let lastPt = null;
+cvs.addEventListener('pointerdown', e=>{
+  audio();
+  drawing = true;
+  const r = cvs.getBoundingClientRect();
+  lastPt = { x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now() };
+  trail.push({...lastPt});
+  cvs.setPointerCapture(e.pointerId);
+});
+cvs.addEventListener('pointermove', e=>{
+  if (!drawing || state !== STATE.play) return;
+  const r = cvs.getBoundingClientRect();
+  const pt = { x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now() };
+  trail.push(pt);
+  if (lastPt) checkSlice(lastPt, pt);
+  lastPt = pt;
+});
+cvs.addEventListener('pointerup', endStroke);
+cvs.addEventListener('pointercancel', endStroke);
+function endStroke(){ drawing = false; lastPt = null; }
+
+function checkSlice(a, b){
+  for (const t of things){
+    if (t.sliced) continue;
+    if (segHitsCircle(a.x, a.y, b.x, b.y, t.x, t.y, t.size*0.45)){
+      sliceThing(t);
+    }
+  }
+}
+
+function segHitsCircle(x1,y1,x2,y2, cx,cy, r){
+  const dx = x2-x1, dy = y2-y1;
+  const len2 = dx*dx + dy*dy;
+  if (len2 === 0) {
+    return (cx-x1)*(cx-x1) + (cy-y1)*(cy-y1) <= r*r;
+  }
+  let t = ((cx-x1)*dx + (cy-y1)*dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const px = x1 + t*dx, py = y1 + t*dy;
+  return (cx-px)*(cx-px) + (cy-py)*(cy-py) <= r*r;
+}
+
+/* ---------- Game logic ---------- */
+function start(){
+  state = STATE.play;
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  things = []; halves = []; particles = []; trail = [];
+  score = 0; lives = 3; combo = 0; comboTimer = 0;
+  spawnTimer = 30; spawnEvery = 65; elapsed = 0;
+  syncHUD();
+}
+function gameOver(reason){
+  state = STATE.over;
+  if (score > best){ best = score; localStorage.setItem('lidudeSlice.best', best); }
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalBest').textContent = best;
+  document.getElementById('overTitle').textContent = reason==='bomb' ? 'Boom.' : 'Out of Lives';
+  document.getElementById('overTag').textContent = reason==='bomb' ? 'do not slice the bombs' : 'they got away';
+  document.getElementById('over').classList.remove('hidden');
+  syncHUD();
+}
+
+function spawn(){
+  // 88% lidude, 12% bomb (after a few seconds)
+  const allowBomb = elapsed > 7*60;
+  const isBomb = allowBomb && Math.random() < 0.12;
+  // toss from bottom edge upward
+  const x = 60 + Math.random() * (W - 120);
+  const y = H + 30;
+  const targetX = 40 + Math.random() * (W - 80);
+  // we want it to peak near top half — solve simple toss
+  const peakY = 80 + Math.random() * (H * 0.25);
+  const flightFrames = 90 + Math.random() * 40; // total frames in the air
+  const g = 0.45;
+  // vy for peak: vy0 = -sqrt(2g*(y-peakY))
+  const vy = -Math.sqrt(Math.max(0, 2*g*(y - peakY)));
+  const vx = (targetX - x) / flightFrames;
+
+  things.push({
+    kind: isBomb ? 'bomb' : 'lidude',
+    x, y, vx, vy,
+    rot: Math.random()*Math.PI*2,
+    spin: (Math.random()-0.5)*0.07,
+    size: isBomb ? 56 : 64,
+    sliced: false,
+    fuse: 0, // bomb fuse animation
+  });
+}
+
+function sliceThing(t){
+  t.sliced = true;
+  if (t.kind === 'bomb'){
+    sfxBomb();
+    bombExplode(t);
+    gameOver('bomb');
+    return;
+  }
+  combo += 1; comboTimer = 30;
+  const bonus = combo >= 3 ? combo : 1;
+  score += bonus;
+  totalSliced += 1;
+  if (combo >= 3){ flashCombo(); }
+  if (combo > 1) sfxCombo(); else sfxSlice(combo);
+
+  // spawn 2 halves drifting apart
+  const spread = 3.5;
+  for (let i = 0; i < 2; i++){
+    const sgn = i === 0 ? -1 : 1;
+    halves.push({
+      x: t.x, y: t.y,
+      vx: t.vx + sgn * spread,
+      vy: t.vy - 1,
+      rot: t.rot, spin: sgn * 0.12,
+      size: t.size,
+      side: i, // 0 = left half, 1 = right half
+      life: 60,
+    });
+  }
+  // juice particles
+  for (let i = 0; i < 14; i++){
+    particles.push({
+      x: t.x, y: t.y,
+      vx: (Math.random()-0.5)*9, vy: -2 + Math.random()*-4,
+      life: 40, color: ['#ffd166','#ff006e','#3a86ff','#3aac3e'][i%4],
+    });
+  }
+}
+
+function bombExplode(t){
+  for (let i = 0; i < 36; i++){
+    particles.push({
+      x: t.x, y: t.y,
+      vx: (Math.random()-0.5)*14, vy: (Math.random()-0.5)*14,
+      life: 50, color: ['#ff006e','#ffbe0b','#fff','#1a1a2e'][i%4],
+    });
+  }
+}
+
+function flashCombo(){
+  const el = document.getElementById('combo');
+  el.textContent = combo + '× COMBO!';
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 600);
+}
+
+/* ---------- Update ---------- */
+function update(){
+  if (state !== STATE.play) return;
+  elapsed++;
+
+  // difficulty: spawn faster over time
+  spawnEvery = Math.max(28, 65 - Math.floor(elapsed / 600) * 4);
+  spawnTimer--;
+  if (spawnTimer <= 0){
+    // sometimes burst spawn 2-3 at once
+    const burst = elapsed > 12*60 && Math.random() < 0.25 ? (2 + Math.floor(Math.random()*2)) : 1;
+    for (let i = 0; i < burst; i++){
+      setTimeout(spawn, i * 100);
+    }
+    spawnTimer = spawnEvery;
+  }
+
+  // things
+  for (let i = things.length - 1; i >= 0; i--){
+    const t = things[i];
+    t.vy += 0.45;
+    t.x += t.vx;
+    t.y += t.vy;
+    t.rot += t.spin;
+    if (t.kind === 'bomb') t.fuse++;
+    // off screen at bottom = miss (only if it was a lidude that was tossed up and came back)
+    if (t.y > H + 100){
+      if (!t.sliced && t.kind === 'lidude'){
+        lives--; sfxMiss();
+        if (lives <= 0){ gameOver('miss'); }
+      }
+      things.splice(i,1);
+    }
+  }
+
+  // halves
+  for (let i = halves.length - 1; i >= 0; i--){
+    const h = halves[i];
+    h.vy += 0.45;
+    h.x += h.vx; h.y += h.vy;
+    h.rot += h.spin;
+    h.life--;
+    if (h.life <= 0 || h.y > H + 100) halves.splice(i,1);
+  }
+
+  // particles
+  for (let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+    p.vy += 0.4;
+    p.x += p.vx; p.y += p.vy;
+    p.life--;
+    if (p.life <= 0) particles.splice(i,1);
+  }
+
+  // trail decay
+  while (trail.length > 24) trail.shift();
+  // age out trail when not drawing
+  if (!drawing && trail.length){
+    trail.shift();
+    if (trail.length < 2) trail = [];
+  }
+
+  // combo decay
+  if (comboTimer > 0){ comboTimer--; if (comboTimer === 0) combo = 0; }
+
+  syncHUD();
+}
+
+/* ---------- Render ---------- */
+function clearBG(){
+  // moody purple gradient with subtle vignette
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, '#3a1d3d');
+  g.addColorStop(1, '#1d0e2e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+  // floor strip — like the bottom of a market stall
+  const fg = ctx.createLinearGradient(0, H-50, 0, H);
+  fg.addColorStop(0, 'rgba(0,0,0,0)');
+  fg.addColorStop(1, 'rgba(0,0,0,0.5)');
+  ctx.fillStyle = fg;
+  ctx.fillRect(0, H-50, W, 50);
+}
+
+function drawThing(t){
+  ctx.save();
+  ctx.translate(t.x, t.y);
+  ctx.rotate(t.rot);
+  if (t.kind === 'bomb'){
+    // bomb body: dark sphere with sheen + fuse
+    const r = t.size * 0.45;
+    const grd = ctx.createRadialGradient(-r*0.3, -r*0.3, r*0.1, 0, 0, r);
+    grd.addColorStop(0, '#5a5a72');
+    grd.addColorStop(1, '#1a1a2e');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(0,0,r,0,Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // fuse cap
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(-6, -r-8, 12, 8);
+    // fuse spark
+    const fx = 0, fy = -r-12;
+    const sparkR = 4 + (Math.sin(t.fuse * 0.4) + 1) * 2;
+    const sg = ctx.createRadialGradient(fx,fy,0,fx,fy,sparkR);
+    sg.addColorStop(0, '#fff');
+    sg.addColorStop(0.4, '#ffd166');
+    sg.addColorStop(1, 'rgba(255,100,0,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(fx,fy,sparkR,0,Math.PI*2); ctx.fill();
+  } else {
+    // lidude
+    if (lidudeReady){
+      ctx.drawImage(lidudeImg, -t.size/2, -t.size/2, t.size, t.size);
+    } else {
+      ctx.fillStyle = '#3aac3e';
+      ctx.fillRect(-t.size/2, -t.size/2, t.size, t.size);
+    }
+  }
+  ctx.restore();
+}
+
+function drawHalf(h){
+  ctx.save();
+  ctx.translate(h.x, h.y);
+  ctx.rotate(h.rot);
+  ctx.globalAlpha = Math.min(1, h.life / 30);
+  // clip to half
+  ctx.beginPath();
+  if (h.side === 0) ctx.rect(-h.size/2, -h.size/2, h.size/2, h.size);
+  else ctx.rect(0, -h.size/2, h.size/2, h.size);
+  ctx.clip();
+  if (lidudeReady){
+    ctx.drawImage(lidudeImg, -h.size/2, -h.size/2, h.size, h.size);
+  } else {
+    ctx.fillStyle = '#3aac3e';
+    ctx.fillRect(-h.size/2, -h.size/2, h.size, h.size);
+  }
+  // cut edge highlight
+  ctx.globalAlpha = 0.7;
+  ctx.fillStyle = '#fdf6e3';
+  if (h.side === 0) ctx.fillRect(-2, -h.size/2, 4, h.size);
+  else ctx.fillRect(-2, -h.size/2, 4, h.size);
+  ctx.restore();
+}
+
+function drawTrail(){
+  if (trail.length < 2) return;
+  for (let i = 1; i < trail.length; i++){
+    const a = trail[i-1], b = trail[i];
+    const w = (i / trail.length) * 14 + 2;
+    ctx.strokeStyle = `rgba(255, 240, 200, ${i / trail.length * 0.85})`;
+    ctx.lineWidth = w;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+  // bright tip
+  const last = trail[trail.length-1];
+  const grd = ctx.createRadialGradient(last.x, last.y, 0, last.x, last.y, 18);
+  grd.addColorStop(0, 'rgba(255,255,255,0.9)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath(); ctx.arc(last.x, last.y, 18, 0, Math.PI*2); ctx.fill();
+}
+
+function drawParticles(){
+  for (const p of particles){
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.min(1, p.life / 30);
+    ctx.fillRect(p.x-2, p.y-2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function render(){
+  clearBG();
+  for (const t of things) drawThing(t);
+  for (const h of halves) drawHalf(h);
+  drawParticles();
+  drawTrail();
+}
+
+/* ---------- HUD ---------- */
+function syncHUD(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('best').textContent = Math.max(best, score);
+  document.getElementById('bestMenu').textContent = best;
+  document.getElementById('totalMenu').textContent = totalSliced;
+  localStorage.setItem('lidudeSlice.total', totalSliced);
+  // hearts
+  const lh = document.getElementById('lives');
+  lh.innerHTML = '';
+  for (let i = 0; i < 3; i++){
+    const d = document.createElement('div');
+    d.className = 'heart' + (i < lives ? '' : ' gone');
+    lh.appendChild(d);
+  }
+}
+
+/* ---------- Loop ---------- */
+function loop(){
+  update();
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+document.getElementById('playBtn').addEventListener('click', ()=>{ audio(); start(); });
+document.getElementById('againBtn').addEventListener('click', ()=>{ audio(); start(); });
+document.getElementById('menuBtn').addEventListener('click', ()=>{
+  document.getElementById('over').classList.add('hidden');
+  document.getElementById('menu').classList.remove('hidden');
+  state = STATE.menu;
+});
+
+syncHUD();
+</script>
+</body>
+</html>

@@ -74,6 +74,11 @@
       "id": "lidude-whack",
       "name": "Lidude Whack",
       "path": "lidude-whack/index.html"
+    },
+    {
+      "id": "lidude-slice",
+      "name": "Lidude Slice",
+      "path": "lidude-slice/index.html"
     }
   ]
 }
