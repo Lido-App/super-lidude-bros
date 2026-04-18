@@ -11,9 +11,64 @@
       "path": "leflappy/index.html"
     },
     {
-      "id": "lidude-isle",
-      "name": "Lidude Isle",
-      "path": "lidude-isle/index.html"
+      "id": "lidude-breakout",
+      "name": "Lidude Breakout",
+      "path": "lidude-breakout/index.html"
+    },
+    {
+      "id": "lidude-2048",
+      "name": "Lidude 2048",
+      "path": "lidude-2048/index.html"
+    },
+    {
+      "id": "lidude-tetris",
+      "name": "Lidude Tetris",
+      "path": "lidude-tetris/index.html"
+    },
+    {
+      "id": "lidude-cash",
+      "name": "Lidude Cash",
+      "path": "lidude-cash/index.html"
+    },
+    {
+      "id": "lidude-leap",
+      "name": "Lidude Leap",
+      "path": "lidude-leap/index.html"
+    },
+    {
+      "id": "lidude-pinball",
+      "name": "Lido Pinball",
+      "path": "lidude-pinball/index.html"
+    },
+    {
+      "id": "lidude-stack",
+      "name": "Lidude Stack",
+      "path": "lidude-stack/index.html"
+    },
+    {
+      "id": "lidude-dash",
+      "name": "Lidude Dash",
+      "path": "lidude-dash/index.html"
+    },
+    {
+      "id": "lidude-drop",
+      "name": "Lidude Drop",
+      "path": "lidude-drop/index.html"
+    },
+    {
+      "id": "lidude-invaders",
+      "name": "Lidude Invaders",
+      "path": "lidude-invaders/index.html"
+    },
+    {
+      "id": "lidude-pong",
+      "name": "Lidude Pong",
+      "path": "lidude-pong/index.html"
+    },
+    {
+      "id": "lidude-match",
+      "name": "Lidude Match",
+      "path": "lidude-match/index.html"
     }
   ]
 }
