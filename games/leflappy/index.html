@@ -17,6 +17,7 @@ body {
 }
 canvas { display: block; }
 </style>
+<script src="../_shared/lido-rewards.js"></script>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -96,8 +97,10 @@ function drawLidude(y, vy) {
   ctx.rotate(Math.max(-0.3, Math.min(0.4, vy * 0.04)));
   ctx.scale(s, s);
   const bw=36, bh=28, bx=-bw/2, by=-bh/2;
-  ctx.fillStyle=C.bodyShadow; ctx.fillRect(bx-4,by+2,bw,bh);
-  ctx.fillStyle=C.body; ctx.fillRect(bx,by,bw,bh);
+  // Bird body takes the player's tier skin color (falls back to brand green)
+  const skin = window.LidoRewards && window.LidoRewards.skin;
+  ctx.fillStyle=(skin && skin.ring) || C.bodyShadow; ctx.fillRect(bx-4,by+2,bw,bh);
+  ctx.fillStyle=(skin && skin.primary) || C.body; ctx.fillRect(bx,by,bw,bh);
   ctx.fillStyle=C.eyeWhite;
   ctx.beginPath(); ctx.ellipse(bx+10,by+12,6,7,0,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(bx+26,by+12,6,7,0,0,Math.PI*2); ctx.fill();

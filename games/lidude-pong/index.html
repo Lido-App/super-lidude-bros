@@ -84,6 +84,7 @@
   }
   .footer { font-size: 12px; color: #fff; opacity: 0.55; margin-top: 4px; font-weight: 600; }
 </style>
+<script src="../_shared/lido-rewards.js"></script>
 </head>
 <body>
   <div class="shell">
@@ -367,8 +368,9 @@
     ctx.fillText(state.scoreP, W/2 - 80, 80);
     ctx.fillText(state.scoreC, W/2 + 80, 80);
 
-    // Paddles
-    drawPaddle(16, state.playerY, '#5BD66B');
+    // Paddles — player takes the tier skin, CPU keeps classic red
+    const playerColor = (window.LidoRewards && window.LidoRewards.skin && window.LidoRewards.skin.accent) || '#5BD66B';
+    drawPaddle(16, state.playerY, playerColor);
     drawPaddle(W - 16 - PAD_W, state.cpuY, '#D64545');
 
     // Ball

@@ -148,6 +148,7 @@
     font-weight: 600;
   }
 </style>
+<script src="../_shared/lido-rewards.js"></script>
 </head>
 <body>
   <div class="shell">
@@ -543,20 +544,25 @@
 
   function drawBall() {
     const b = state.ball;
+    // Use player's tier skin for the ball (falls back to brand gold if rewards aren't loaded)
+    const skin = (window.LidoRewards && window.LidoRewards.skin) || null;
+    const bodyColor = skin ? skin.accent : '#FFC233';
+    const rimColor  = skin ? skin.ring   : '#9F7A1F';
+    const glowRGBA  = skin ? skin.glow   : 'rgba(255,194,51,0.45)';
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(b.x, b.y + BALL_R + 2, BALL_R * 0.8, 2, 0, 0, Math.PI*2); ctx.fill();
     // Glow
     const glow = ctx.createRadialGradient(b.x, b.y, BALL_R, b.x, b.y, BALL_R * 2.2);
-    glow.addColorStop(0, 'rgba(255,194,51,0.45)');
-    glow.addColorStop(1, 'rgba(255,194,51,0)');
+    glow.addColorStop(0, glowRGBA);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R * 2.2, 0, Math.PI*2); ctx.fill();
     // Body
-    ctx.fillStyle = '#FFC233';
+    ctx.fillStyle = bodyColor;
     ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI*2); ctx.fill();
     // Rim
-    ctx.strokeStyle = '#9F7A1F';
+    ctx.strokeStyle = rimColor;
     ctx.lineWidth = 1.5;
     ctx.stroke();
     // Shine
