@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Lidude Pong</title>
+<style>
+  :root {
+    --brand: #2B2A6B;
+    --brand-accent: #FFC233;
+    --danger: #D64545;
+    --success: #5BD66B;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #0E0E22; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh; padding: 16px;
+    user-select: none;
+    background: radial-gradient(ellipse at top, #1d1c4a 0%, #0E0E22 60%);
+  }
+  .shell { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 640px; }
+  .title {
+    font-size: clamp(26px, 5vw, 40px); font-weight: 900; letter-spacing: -1px;
+    color: #fff; text-shadow: 3px 3px 0 var(--brand-accent);
+    margin: 0; text-align: center; line-height: 1;
+  }
+  .title .accent { color: var(--danger); }
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; font-weight: 800; font-size: 15px;
+    padding: 8px 14px;
+    background: var(--brand); color: #fff;
+    border-radius: 10px; box-shadow: 0 4px 0 rgba(0,0,0,0.35);
+  }
+  .hud .chip { display: inline-flex; align-items: center; gap: 6px; }
+  .stage {
+    position: relative; width: 100%;
+    aspect-ratio: 16 / 10; max-width: 620px;
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 0 0 4px var(--brand), 0 0 0 8px var(--brand-accent), 0 14px 0 rgba(0,0,0,0.35);
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; background: rgba(14, 14, 34, 0.85);
+    color: #fff; padding: 20px; gap: 10px;
+    transition: opacity 180ms ease;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .overlay h2 { font-size: clamp(24px, 5vw, 36px); margin: 0; text-shadow: 3px 3px 0 var(--brand-accent); }
+  .overlay p { margin: 0; font-weight: 600; opacity: 0.9; }
+  .btn {
+    margin-top: 10px;
+    background: var(--brand-accent); color: var(--brand);
+    border: none; padding: 12px 22px;
+    font-size: 17px; font-weight: 900; border-radius: 10px;
+    cursor: pointer; box-shadow: 0 5px 0 rgba(0,0,0,0.35);
+    transition: transform 80ms ease, box-shadow 80ms ease;
+    font-family: inherit;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 rgba(0,0,0,0.35); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+  .difficulty { display: flex; gap: 6px; margin-top: 6px; }
+  .diff-btn {
+    background: rgba(255,255,255,0.1); color: #fff; border: 2px solid rgba(255,255,255,0.2);
+    padding: 6px 14px; border-radius: 8px;
+    font-size: 12px; font-weight: 800; cursor: pointer;
+    font-family: inherit; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .diff-btn.active { background: var(--brand-accent); color: var(--brand); border-color: var(--brand-accent); }
+  .hint { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+  .key {
+    display: inline-block; background: rgba(255,255,255,0.2); border-radius: 4px;
+    padding: 2px 6px; font-weight: 800; font-size: 11px; margin: 0 2px;
+  }
+  .footer { font-size: 12px; color: #fff; opacity: 0.55; margin-top: 4px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <h1 class="title">Lidude <span class="accent">Pong</span></h1>
+    <div class="hud">
+      <span class="chip">You: <span id="score-p">0</span></span>
+      <span class="chip">Rally: <span id="rally">0</span></span>
+      <span class="chip">CPU: <span id="score-c">0</span></span>
+    </div>
+    <div class="stage">
+      <canvas id="game"></canvas>
+      <div class="overlay" id="overlay">
+        <h2 id="overlay-title">Lidude Pong</h2>
+        <p id="overlay-sub">First to 7 wins. Don't let the L-coin past you.</p>
+        <div class="difficulty">
+          <button class="diff-btn active" data-d="easy">Easy</button>
+          <button class="diff-btn" data-d="normal">Normal</button>
+          <button class="diff-btn" data-d="hard">Hard</button>
+        </div>
+        <p class="hint">
+          Move <span class="key">&uarr;</span><span class="key">&darr;</span> or drag
+        </p>
+        <button class="btn" id="start-btn">Start</button>
+      </div>
+    </div>
+    <div class="footer">A Lido joint &middot; classic paddle duel</div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+  const W = 620, H = 388;
+  const PAD_W = 12, PAD_H = 68;
+  const BALL_R = 8;
+  const WIN_SCORE = 7;
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  function fit() {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  fit();
+  window.addEventListener('resize', fit);
+
+  const els = {
+    scoreP: document.getElementById('score-p'),
+    scoreC: document.getElementById('score-c'),
+    rally:  document.getElementById('rally'),
+    overlay: document.getElementById('overlay'),
+    overlayTitle: document.getElementById('overlay-title'),
+    overlaySub:   document.getElementById('overlay-sub'),
+    startBtn: document.getElementById('start-btn'),
+    diffBtns: document.querySelectorAll('.diff-btn'),
+  };
+
+  const state = {
+    playerY: H/2, cpuY: H/2,
+    ball: { x: W/2, y: H/2, vx: 4, vy: 2 },
+    scoreP: 0, scoreC: 0,
+    rally: 0,
+    running: false, started: false, over: false,
+    paused: false,
+    pendingServe: true,
+    serveTo: 1, // 1 = right (cpu), -1 = left (player)
+    keys: { up: false, down: false },
+    diff: 'easy',
+    particles: [],
+    shake: 0,
+  };
+
+  const DIFF = {
+    easy:   { cpuSpeed: 3.6, cpuReact: 0.08, ballSpeed: 4.2, maxBall: 8 },
+    normal: { cpuSpeed: 4.8, cpuReact: 0.14, ballSpeed: 5.0, maxBall: 10 },
+    hard:   { cpuSpeed: 6.0, cpuReact: 0.22, ballSpeed: 5.6, maxBall: 12 },
+  };
+
+  els.diffBtns.forEach(b => b.addEventListener('click', () => {
+    els.diffBtns.forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    state.diff = b.dataset.d;
+  }));
+
+  // Input
+  window.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if (k === 'ArrowUp' || k === 'ArrowDown' || k === ' ') e.preventDefault();
+    if (!state.started || state.over) {
+      if (k === 'Enter' || k === ' ') startGame();
+      return;
+    }
+    if (k === 'ArrowUp'   || k === 'w' || k === 'W') state.keys.up = true;
+    if (k === 'ArrowDown' || k === 's' || k === 'S') state.keys.down = true;
+    if (k === ' ' && state.pendingServe) serve();
+  }, { passive: false });
+  window.addEventListener('keyup', (e) => {
+    const k = e.key;
+    if (k === 'ArrowUp'   || k === 'w' || k === 'W') state.keys.up = false;
+    if (k === 'ArrowDown' || k === 's' || k === 'S') state.keys.down = false;
+  });
+
+  function mouseToPaddle(clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const scale = H / rect.height;
+    const y = (clientY - rect.top) * scale;
+    state.playerY = Math.max(PAD_H/2, Math.min(H - PAD_H/2, y));
+  }
+  canvas.addEventListener('mousemove', (e) => { if (state.running) mouseToPaddle(e.clientY); });
+  canvas.addEventListener('touchmove', (e) => {
+    if (!state.running) return;
+    if (e.touches.length) { mouseToPaddle(e.touches[0].clientY); e.preventDefault(); }
+  }, { passive: false });
+  canvas.addEventListener('click', () => { if (state.pendingServe) serve(); });
+  canvas.addEventListener('touchstart', () => { if (state.pendingServe) serve(); }, { passive: true });
+
+  els.startBtn.addEventListener('click', () => startGame());
+
+  function startGame() {
+    state.scoreP = 0; state.scoreC = 0; state.rally = 0;
+    state.playerY = H/2; state.cpuY = H/2;
+    state.running = true; state.started = true; state.over = false;
+    state.pendingServe = true; state.serveTo = Math.random() < 0.5 ? 1 : -1;
+    placeBallForServe();
+    hideOverlay();
+    updateHUD();
+  }
+
+  function placeBallForServe() {
+    state.ball.x = W/2; state.ball.y = H/2;
+    state.ball.vx = 0; state.ball.vy = 0;
+    state.pendingServe = true;
+  }
+
+  function serve() {
+    if (!state.pendingServe) return;
+    const d = DIFF[state.diff];
+    const angle = (Math.random() - 0.5) * 0.6;
+    state.ball.vx = state.serveTo * d.ballSpeed * Math.cos(angle);
+    state.ball.vy = d.ballSpeed * Math.sin(angle) + (Math.random() - 0.5) * 1.2;
+    state.pendingServe = false;
+  }
+
+  function resetRound(winner) {
+    state.rally = 0;
+    state.serveTo = winner === 'p' ? 1 : -1;
+    placeBallForServe();
+    if (state.scoreP >= WIN_SCORE || state.scoreC >= WIN_SCORE) {
+      endGame(state.scoreP > state.scoreC);
+    }
+  }
+
+  function endGame(playerWon) {
+    state.over = true; state.running = false;
+    showOverlay({
+      title: playerWon ? 'You Win!' : 'CPU Wins',
+      sub: `Final: ${state.scoreP} – ${state.scoreC}.`,
+      btn: 'Play Again',
+    });
+  }
+
+  function step() {
+    const d = DIFF[state.diff];
+    // Player
+    const pSpeed = 7;
+    if (state.keys.up)   state.playerY -= pSpeed;
+    if (state.keys.down) state.playerY += pSpeed;
+    state.playerY = Math.max(PAD_H/2, Math.min(H - PAD_H/2, state.playerY));
+
+    // Ball or serve follow
+    if (state.pendingServe) {
+      // Ball tracks the server's paddle
+      if (state.serveTo === 1) state.ball.y = state.playerY;
+      else                     state.ball.y = state.cpuY;
+      state.ball.x = state.serveTo === 1 ? (16 + PAD_W + BALL_R + 2) : (W - 16 - PAD_W - BALL_R - 2);
+    } else {
+      state.ball.x += state.ball.vx;
+      state.ball.y += state.ball.vy;
+      // Top/bottom walls
+      if (state.ball.y - BALL_R < 0) { state.ball.y = BALL_R; state.ball.vy = Math.abs(state.ball.vy); }
+      if (state.ball.y + BALL_R > H) { state.ball.y = H - BALL_R; state.ball.vy = -Math.abs(state.ball.vy); }
+
+      // Paddle collisions
+      const px = 16; // player paddle x
+      const cx = W - 16 - PAD_W; // cpu paddle x
+      if (state.ball.vx < 0 &&
+          state.ball.x - BALL_R < px + PAD_W &&
+          state.ball.x - BALL_R > px - 4 &&
+          state.ball.y > state.playerY - PAD_H/2 &&
+          state.ball.y < state.playerY + PAD_H/2) {
+        handlePaddleHit('p');
+      } else if (state.ball.vx > 0 &&
+                 state.ball.x + BALL_R > cx &&
+                 state.ball.x + BALL_R < cx + PAD_W + 4 &&
+                 state.ball.y > state.cpuY - PAD_H/2 &&
+                 state.ball.y < state.cpuY + PAD_H/2) {
+        handlePaddleHit('c');
+      }
+
+      // Scoring
+      if (state.ball.x + BALL_R < -10) { state.scoreC++; updateHUD(); resetRound('c'); }
+      else if (state.ball.x - BALL_R > W + 10) { state.scoreP++; updateHUD(); resetRound('p'); }
+    }
+
+    // CPU AI — lerp toward ball, with reaction delay + error
+    const target = state.ball.y + (Math.random() - 0.5) * 10;
+    const diff = target - state.cpuY;
+    const react = d.cpuReact;
+    const step = Math.max(-d.cpuSpeed, Math.min(d.cpuSpeed, diff * react * 3));
+    state.cpuY += step;
+    state.cpuY = Math.max(PAD_H/2, Math.min(H - PAD_H/2, state.cpuY));
+
+    // Particles
+    for (const p of state.particles) {
+      p.x += p.vx; p.y += p.vy;
+      p.vy += 0.18; p.life--;
+    }
+    state.particles = state.particles.filter(p => p.life > 0);
+    if (state.shake > 0) state.shake = Math.max(0, state.shake - 0.3);
+  }
+
+  function handlePaddleHit(side) {
+    const d = DIFF[state.diff];
+    const padY = side === 'p' ? state.playerY : state.cpuY;
+    const rel = (state.ball.y - padY) / (PAD_H/2); // -1..1
+    const angle = rel * (Math.PI / 3.2);
+    const speed = Math.min(d.maxBall, Math.hypot(state.ball.vx, state.ball.vy) * 1.06 + 0.2);
+    const dir = side === 'p' ? 1 : -1;
+    state.ball.vx = dir * speed * Math.cos(angle);
+    state.ball.vy = speed * Math.sin(angle);
+    // Nudge out of paddle
+    state.ball.x += dir * 4;
+    state.rally++;
+    updateHUD();
+    burstParticles(state.ball.x, state.ball.y, '#FFC233', 6);
+    state.shake = 2;
+  }
+
+  function burstParticles(x, y, color, count = 8) {
+    for (let i = 0; i < count; i++) {
+      state.particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.8) * 2,
+        life: 20 + Math.random() * 10,
+        color,
+      });
+    }
+  }
+
+  function draw() {
+    const sx = (Math.random() - 0.5) * state.shake;
+    const sy = (Math.random() - 0.5) * state.shake;
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    // BG
+    const grd = ctx.createLinearGradient(0,0,0,H);
+    grd.addColorStop(0, '#14143a');
+    grd.addColorStop(1, '#0E0E22');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+
+    // Middle dashed line
+    ctx.strokeStyle = 'rgba(255,194,51,0.5)';
+    ctx.setLineDash([10, 10]);
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Big center "L" watermark
+    ctx.fillStyle = 'rgba(255,194,51,0.06)';
+    ctx.font = 'bold 160px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('L', W/2, H/2);
+
+    // Scores
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = 'bold 70px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(state.scoreP, W/2 - 80, 80);
+    ctx.fillText(state.scoreC, W/2 + 80, 80);
+
+    // Paddles
+    drawPaddle(16, state.playerY, '#5BD66B');
+    drawPaddle(W - 16 - PAD_W, state.cpuY, '#D64545');
+
+    // Ball
+    drawBall();
+
+    // Particles
+    for (const p of state.particles) {
+      ctx.globalAlpha = Math.max(0, p.life / 30);
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Serve indicator
+    if (state.pendingServe && state.running) {
+      ctx.fillStyle = 'rgba(255,194,51,0.9)';
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Tap / Space to serve', W/2, H - 12);
+    }
+
+    ctx.restore();
+  }
+
+  function drawPaddle(x, cy, color) {
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    roundRect(x + 1, cy - PAD_H/2 + 2, PAD_W, PAD_H, 4); ctx.fill();
+    // Body
+    ctx.fillStyle = color;
+    roundRect(x, cy - PAD_H/2, PAD_W, PAD_H, 4); ctx.fill();
+    // Accent
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(x + 2, cy - PAD_H/2 + 3, PAD_W - 4, 2);
+  }
+
+  function drawBall() {
+    const b = state.ball;
+    // Glow
+    const g = ctx.createRadialGradient(b.x, b.y, BALL_R, b.x, b.y, BALL_R * 2);
+    g.addColorStop(0, 'rgba(255,194,51,0.4)');
+    g.addColorStop(1, 'rgba(255,194,51,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R * 2, 0, Math.PI*2); ctx.fill();
+    // Body
+    const bg = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, BALL_R);
+    bg.addColorStop(0, '#FFF6E0');
+    bg.addColorStop(0.6, '#FFC233');
+    bg.addColorStop(1, '#9F7A1F');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI*2); ctx.fill();
+    // L mark
+    ctx.fillStyle = '#2B2A6B';
+    ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('L', b.x, b.y + 1);
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y,     x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x,     y + h, r);
+    ctx.arcTo(x,     y + h, x,     y,     r);
+    ctx.arcTo(x,     y,     x + w, y,     r);
+    ctx.closePath();
+  }
+
+  function updateHUD() {
+    els.scoreP.textContent = state.scoreP;
+    els.scoreC.textContent = state.scoreC;
+    els.rally.textContent  = state.rally;
+  }
+  function showOverlay({ title, sub, btn }) {
+    els.overlayTitle.textContent = title;
+    els.overlaySub.textContent = sub;
+    els.startBtn.textContent = btn;
+    els.overlay.classList.remove('hidden');
+  }
+  function hideOverlay() { els.overlay.classList.add('hidden'); }
+
+  function loop() {
+    if (state.running) step();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
