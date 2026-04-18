@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Lidude Match</title>
+<style>
+  :root {
+    --brand:        #2B2A6B;
+    --brand-light:  #4A49A3;
+    --brand-accent: #FFC233;
+    --danger:       #D64545;
+    --success:      #5BD66B;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #0E0E22; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh; padding: 16px;
+    user-select: none;
+    background: radial-gradient(ellipse at top, #1d1c4a 0%, #0E0E22 60%);
+  }
+  .shell { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 480px; }
+  .title {
+    font-size: clamp(26px, 5vw, 40px); font-weight: 900; letter-spacing: -1px;
+    color: #fff; text-shadow: 3px 3px 0 var(--brand-accent);
+    margin: 0; text-align: center; line-height: 1;
+  }
+  .title .accent { color: var(--danger); }
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; gap: 10px;
+  }
+  .stat {
+    flex: 1;
+    background: var(--brand); color: #fff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.35);
+    text-align: center;
+  }
+  .stat .label { font-size: 10px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; }
+  .stat .value { font-size: 20px; font-weight: 900; color: var(--brand-accent); font-variant-numeric: tabular-nums; }
+  .btn {
+    background: var(--brand-accent); color: var(--brand);
+    border: none; padding: 10px 16px;
+    font-size: 13px; font-weight: 900; border-radius: 10px;
+    cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.35);
+    transition: transform 80ms ease, box-shadow 80ms ease;
+    font-family: inherit;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,0.35); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+  .board-wrap { position: relative; width: 100%; max-width: 440px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    width: 100%; aspect-ratio: 1 / 1;
+    padding: 10px;
+    background: #1a1a3c;
+    border-radius: 12px;
+    box-shadow: 0 0 0 4px var(--brand), 0 0 0 8px var(--brand-accent), 0 14px 0 rgba(0,0,0,0.35);
+  }
+  .card {
+    position: relative;
+    border-radius: 8px;
+    cursor: pointer;
+    perspective: 600px;
+    aspect-ratio: 1 / 1;
+  }
+  .card .face {
+    position: absolute; inset: 0;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(28px, 7vw, 44px);
+    font-weight: 900;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: transform 300ms cubic-bezier(.4,1.6,.5,.9);
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .card .back {
+    background: linear-gradient(135deg, #2B2A6B, #4A49A3);
+    color: #FFC233;
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3), 0 3px 0 rgba(0,0,0,0.25);
+    border: 2px solid #FFC233;
+  }
+  .card .front {
+    background: #FBF9F0;
+    color: #2B2A6B;
+    transform: rotateY(180deg);
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.12), 0 3px 0 rgba(0,0,0,0.25);
+  }
+  .card.flipped .back  { transform: rotateY(180deg); }
+  .card.flipped .front { transform: rotateY(360deg); }
+  .card.matched .front { background: #FFE8A3; box-shadow: inset 0 -4px 0 rgba(180,120,0,0.3), 0 3px 0 rgba(0,0,0,0.25), 0 0 18px rgba(255,194,51,0.6); }
+  .card.matched { animation: matchPop 0.5s cubic-bezier(.4,1.6,.5,.9); }
+  @keyframes matchPop {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; background: rgba(14, 14, 34, 0.9);
+    color: #fff; padding: 20px; gap: 10px;
+    border-radius: 12px;
+    transition: opacity 180ms ease;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .overlay h2 { font-size: clamp(22px, 5vw, 32px); margin: 0; text-shadow: 3px 3px 0 var(--brand-accent); }
+  .overlay p { margin: 0; font-weight: 600; opacity: 0.9; }
+  .hint {
+    font-size: 12px; color: #fff; opacity: 0.6; text-align: center; font-weight: 600;
+  }
+  .footer { font-size: 12px; color: #fff; opacity: 0.55; margin-top: 4px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <h1 class="title">Lidude <span class="accent">Match</span></h1>
+    <div class="hud">
+      <div class="stat">
+        <div class="label">Moves</div>
+        <div class="value" id="moves">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Time</div>
+        <div class="value" id="time">0:00</div>
+      </div>
+      <div class="stat">
+        <div class="label">Best</div>
+        <div class="value" id="best">--</div>
+      </div>
+      <button class="btn" id="restart">New</button>
+    </div>
+
+    <div class="board-wrap">
+      <div class="grid" id="grid"></div>
+      <div class="overlay hidden" id="overlay">
+        <h2 id="overlay-title">You win!</h2>
+        <p id="overlay-sub"></p>
+        <button class="btn" id="play-again">Play Again</button>
+      </div>
+    </div>
+
+    <p class="hint">Flip two cards. Match all 8 pairs in the fewest moves.</p>
+    <div class="footer">A Lido joint &middot; don't forget where you saw them</div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  const SYMBOLS = ['🌱','🪙','🐰','🐥','🐿️','⚡','🦊','🐉'];
+  const STORAGE_KEY = 'lidude-match:best-moves';
+
+  const gridEl   = document.getElementById('grid');
+  const movesEl  = document.getElementById('moves');
+  const timeEl   = document.getElementById('time');
+  const bestEl   = document.getElementById('best');
+  const overlay  = document.getElementById('overlay');
+  const ovTitle  = document.getElementById('overlay-title');
+  const ovSub    = document.getElementById('overlay-sub');
+  const restartEl = document.getElementById('restart');
+  const playAgainEl = document.getElementById('play-again');
+
+  const state = {
+    cards: [],
+    flipped: [],
+    locked: false,
+    matches: 0,
+    moves: 0,
+    startTime: 0,
+    timer: null,
+    best: loadBest(),
+  };
+  bestEl.textContent = state.best == null ? '--' : state.best;
+
+  function loadBest() {
+    try {
+      const v = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+      return Number.isFinite(v) && v > 0 ? v : null;
+    } catch (_) { return null; }
+  }
+  function saveBest(n) {
+    try { localStorage.setItem(STORAGE_KEY, String(n)); } catch (_) {}
+  }
+
+  function buildDeck() {
+    const deck = [...SYMBOLS, ...SYMBOLS];
+    // Shuffle
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
+  }
+
+  function startGame() {
+    state.flipped = [];
+    state.locked = false;
+    state.matches = 0;
+    state.moves = 0;
+    state.startTime = Date.now();
+    if (state.timer) clearInterval(state.timer);
+    state.timer = setInterval(updateTime, 500);
+    movesEl.textContent = '0';
+    timeEl.textContent = '0:00';
+    overlay.classList.add('hidden');
+    buildGrid();
+  }
+
+  function buildGrid() {
+    const deck = buildDeck();
+    gridEl.innerHTML = '';
+    state.cards = deck.map((sym, i) => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.dataset.index = i;
+      div.innerHTML = `
+        <div class="face back">L</div>
+        <div class="face front">${sym}</div>
+      `;
+      div.addEventListener('click', () => onCardClick(i));
+      gridEl.appendChild(div);
+      return { el: div, symbol: sym, flipped: false, matched: false };
+    });
+  }
+
+  function onCardClick(i) {
+    if (state.locked) return;
+    const card = state.cards[i];
+    if (card.flipped || card.matched) return;
+    card.flipped = true;
+    card.el.classList.add('flipped');
+    state.flipped.push(card);
+    if (state.flipped.length === 2) {
+      state.moves++;
+      movesEl.textContent = state.moves;
+      checkMatch();
+    }
+  }
+
+  function checkMatch() {
+    const [a, b] = state.flipped;
+    if (a.symbol === b.symbol) {
+      a.matched = true; b.matched = true;
+      a.el.classList.add('matched');
+      b.el.classList.add('matched');
+      state.flipped = [];
+      state.matches++;
+      if (state.matches === SYMBOLS.length) win();
+    } else {
+      state.locked = true;
+      setTimeout(() => {
+        a.flipped = false; b.flipped = false;
+        a.el.classList.remove('flipped');
+        b.el.classList.remove('flipped');
+        state.flipped = [];
+        state.locked = false;
+      }, 850);
+    }
+  }
+
+  function updateTime() {
+    const secs = Math.floor((Date.now() - state.startTime) / 1000);
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    timeEl.textContent = `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function win() {
+    if (state.timer) clearInterval(state.timer);
+    const totalSecs = Math.floor((Date.now() - state.startTime) / 1000);
+    const tMin = Math.floor(totalSecs / 60);
+    const tSec = totalSecs % 60;
+    const timeStr = `${tMin}:${String(tSec).padStart(2,'0')}`;
+    let msg = `Cleared in <b>${state.moves}</b> moves · <b>${timeStr}</b>.`;
+    if (state.best == null || state.moves < state.best) {
+      state.best = state.moves;
+      saveBest(state.moves);
+      bestEl.textContent = state.best;
+      msg += ` 🏆 New best!`;
+    }
+    ovTitle.textContent = 'You win!';
+    ovSub.innerHTML = msg;
+    overlay.classList.remove('hidden');
+  }
+
+  restartEl.addEventListener('click', startGame);
+  playAgainEl.addEventListener('click', startGame);
+
+  startGame();
+})();
+</script>
+</body>
+</html>
